@@ -17,7 +17,17 @@
 	    (.stop thr (Exception. "Thread stopped!")) 
 	    (throw e)))))
 
-(def mutilate (comp flatten macroexpand-all))
+(defn separate [s]
+  (flatten
+   (map
+    #(if (symbol? %)
+       (if-let [s-meta (-> % resolve meta)]
+         ((juxt (comp symbol str :ns) :name) s-meta)
+         (-> % str (.split "/") (->> (map symbol))))
+       %)
+    s)))
+
+(def mutilate (comp separate macroexpand-all))
 
 (defn check-form [form sandbox-set]
   (some sandbox-set (mutilate form)))
@@ -35,16 +45,19 @@
   (fn [code]
     (if ((complement check-form) code tester)
       (do
-        (binding [*ns* (create-ns namespace)
-                  *read-eval* false
-                  tester tester]
-          (refer 'clojure.core)
-          (eval
-           '(defmacro dot [object method & args]
-              (if (not
-                   (or (-> object class pr-str symbol clojail.core/tester)
-                       (clojail.core/tester method)))
-                `(. ~object ~method ~@args)
-                (throw (Exception. "Sandbox error!1!")))))
-          (eval (dotify code))))
+        (thunk-timeout
+         (fn []
+           (binding [*ns* (create-ns namespace)
+                     *read-eval* false
+                     tester tester]
+             (refer 'clojure.core)
+             (eval
+              '(defmacro dot [object method & args]
+                 (if (not
+                      (or (-> object class pr-str symbol clojail.core/tester)
+                          (clojail.core/tester method)))
+                   `(. ~object ~method ~@args)
+                   (throw (Exception. "Sandbox error!1!")))))
+             (eval (dotify code))))
+         timeout))
       (throw (Exception. "Sandbox error!")))))
