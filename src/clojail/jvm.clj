@@ -20,7 +20,7 @@
 (defn priv-action [thunk]
       (proxy [java.security.PrivilegedAction] [] (run [] (thunk))))
  
-(defn sandbox
+(defn jvm-sandbox
   [thunk context]
       (java.security.AccessController/doPrivileged
         (priv-action thunk)
