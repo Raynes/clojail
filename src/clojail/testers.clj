@@ -5,4 +5,5 @@
 (def ^{:doc "A somewhat secure tester. No promises."}
      secure-tester
      #{'alter-var-root 'intern 'def 'eval 'catch
-       'load-string 'load-reader 'addMethod 'ns-resolve})
+       'load-string 'load-reader 'addMethod 'ns-resolve
+       'clojure.lang.IRef 'clojure.lang.ARef 'clojure.lang.Ref})
