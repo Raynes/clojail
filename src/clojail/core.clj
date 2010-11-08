@@ -43,7 +43,8 @@
 (defn sandbox [tester & {:keys [timeout namespace]
                          :or {timeout 10000 namespace (gensym "sandbox")}}]
   (fn [code]
-    (if ((complement check-form) code tester)
+    (if-let [problem (check-form code tester)]
+      (throw (SecurityException. (str "You tripped the alarm! " problem " is bad!")))
       (thunk-timeout
        (fn []
          (binding [*ns* (create-ns namespace)
@@ -57,7 +58,8 @@
                         (-> object pr-str symbol resolve pr-str symbol clojail.core/tester)
                         (clojail.core/tester method)))
                  `(. ~object ~method ~@args)
-                 (throw (Exception. "Sandbox error!1!")))))
+                 (throw
+                  (SecurityException.
+                   (str "Tried to call " method " on " object ". This is not allowed."))))))
            (eval (dotify code))))
-       timeout)
-      (throw (Exception. "Sandbox error!")))))
+       timeout))))
