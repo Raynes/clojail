@@ -1,21 +1,26 @@
-(ns clojail.core
+(ns ^{:doc "Defines simple Clojure sandboxing functionality."}
+  clojail.core
   (:use [clojure.walk :only [macroexpand-all]]
         clojail.jvm)
   (:import (java.util.concurrent TimeoutException TimeUnit FutureTask)))
 
-(defn enable-security-manager []
-  (System/setSecurityManager (SecurityManager.)))
+(defn enable-security-manager
+  "Enable the JVM security manager. The sandbox can do this for you."
+  [] (System/setSecurityManager (SecurityManager.)))
 
-(defn thunk-timeout [thunk seconds]
-      (let [task (FutureTask. thunk)
-            thr (Thread. task)]
-        (try
-          (.start thr)
-          (.get task seconds TimeUnit/MILLISECONDS)
+(defn thunk-timeout
+  "Takes a function and an amount of time in ms to wait for the function to finish
+  executing. The sandbox can do this for you."
+  [thunk seconds]
+  (let [task (FutureTask. thunk)
+        thr (Thread. task)]
+    (try
+      (.start thr)
+      (.get task seconds TimeUnit/MILLISECONDS)
           (catch TimeoutException e
-                 (.cancel task true)
-                 (.stop thr (Exception. "Thread stopped!")) 
-		 (throw (TimeoutException. "Execution timed out.")))
+            (.cancel task true)
+            (.stop thr (Exception. "Thread stopped!")) 
+            (throw (TimeoutException. "Execution timed out.")))
 	  (catch Exception e
 	    (.cancel task true)
 	    (.stop thr (Exception. "Thread stopped!")) 
@@ -33,7 +38,7 @@
 
 (defn- collify [form] (if (coll? form) form [form]))
 
-(def- mutilate (comp separate collify macroexpand-all))
+(def ^:private mutilate (comp separate collify macroexpand-all))
 
 (defn- check-form [form sandbox-set]
   (some sandbox-set (mutilate form)))
@@ -75,7 +80,7 @@
 
    Example: (def sb (sandbox #{'alter-var-root 'java.lang.Thread} :timeout 5000))
             (let [writer (java.io.StringWriter.)]
-              (sb '(println "blah") {#'*out* writer}) (str writer))
+              (sb '(println \"blah\") {#'*out* writer}) (str writer))
    The above example returns \"blah\\n\""
   [tester & {:keys [timeout namespace context jvm?]
              :or {timeout 10000 namespace (gensym "sandbox")
