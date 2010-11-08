@@ -44,20 +44,21 @@
                          :or {timeout 10000 namespace (gensym "sandbox")}}]
   (fn [code]
     (if ((complement check-form) code tester)
-      (do
-        (thunk-timeout
-         (fn []
-           (binding [*ns* (create-ns namespace)
-                     *read-eval* false
-                     tester tester]
-             (refer 'clojure.core)
-             (eval
-              '(defmacro dot [object method & args]
-                 (if (not
-                      (or (-> object class pr-str symbol clojail.core/tester)
-                          (clojail.core/tester method)))
-                   `(. ~object ~method ~@args)
-                   (throw (Exception. "Sandbox error!1!")))))
-             (eval (dotify code))))
-         timeout))
+      (thunk-timeout
+       (fn []
+         (binding [*ns* (create-ns namespace)
+                   *read-eval* false
+                   tester tester]
+           (refer 'clojure.core)
+           (eval
+            '(defmacro dot [object method & args]
+               (prn "blah")
+               (if (not
+                    (or (-> object class pr-str symbol clojail.core/tester)
+                        (-> object pr-str symbol clojail.core/tester)
+                        (clojail.core/tester method)))
+                 `(. ~object ~method ~@args)
+                 (throw (Exception. "Sandbox error!1!")))))
+           (eval (dotify code))))
+       timeout)
       (throw (Exception. "Sandbox error!")))))
