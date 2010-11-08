@@ -21,7 +21,7 @@
 	    (.stop thr (Exception. "Thread stopped!")) 
 	    (throw e)))))
 
-(defn separate [s]
+(defn- separate [s]
   (flatten
    (map
     #(if (symbol? %)
@@ -31,14 +31,14 @@
        %)
     s)))
 
-(defn collify [form] (if (coll? form) form [form]))
+(defn- collify [form] (if (coll? form) form [form]))
 
-(def mutilate (comp separate collify macroexpand-all))
+(def- mutilate (comp separate collify macroexpand-all))
 
-(defn check-form [form sandbox-set]
+(defn- check-form [form sandbox-set]
   (some sandbox-set (mutilate form)))
 
-(defn dotify [code]
+(defn- dotify [code]
   (cond
    (coll? code)
    (map #(cond (= % '.) 'dot
@@ -50,16 +50,36 @@
 
 (declare tester)
 
-(defn when-push [bindings code]
+(defn- when-push [bindings code]
   (if bindings
     (try (push-thread-bindings bindings)
          (code)
          (finally (pop-thread-bindings)))
     (code)))
 
-(defn sandbox [tester & {:keys [timeout namespace context jvm?]
-                         :or {timeout 10000 namespace (gensym "sandbox")
-                              context (-> (empty-perms-list) domain context) jvm? true}}]
+(defn sandbox
+  "This function creates a new sandbox from a tester (a set of symbols that make up a blacklist)
+   and optional arguments.
+
+   Optional arguments are as follows:
+   :timeout, default is 10000 MS or 10 seconds. If the expression evaluated in the sandbox takes
+   longer than the timeout, an error will be thrown and the thread running the code will be stopped.
+   :namespace, the namespace of the sandbox. The default is (gensym \"sandbox\").
+   :context, the context for the JVM sandbox to run in. Only relevant if :jvm? is true. It has a sane
+   default, so you shouldn't need to worry about this.
+   :jvm?, if set to true, the JVM sandbox will be employed. It defaults to true.
+
+   This function will return a new function that you should bind to something. You can call this
+   function with code and it will be evaluated in the sandbox. The function also takes an optional
+   second parameter which is a hashmap of vars to values that will be passed to push-thread-bindings.
+
+   Example: (def sb (sandbox #{'alter-var-root 'java.lang.Thread} :timeout 5000))
+            (let [writer (java.io.StringWriter.)]
+              (sb '(println "blah") {#'*out* writer}) (str writer))
+   The above example returns \"blah\\n\""
+  [tester & {:keys [timeout namespace context jvm?]
+             :or {timeout 10000 namespace (gensym "sandbox")
+                  context (-> (empty-perms-list) domain context) jvm? true}}]
   (when jvm? (enable-security-manager))
   (fn [code & [bindings]]
     (if-let [problem (check-form code tester)]
