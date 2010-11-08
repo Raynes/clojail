@@ -27,22 +27,28 @@
        %)
     s)))
 
-(def mutilate (comp separate macroexpand-all))
+(defn collify [form] (if (coll? form) form [form]))
+
+(def mutilate (comp separate collify macroexpand-all))
 
 (defn check-form [form sandbox-set]
   (some sandbox-set (mutilate form)))
 
 (defn dotify [code]
-  (map #(cond (= % '.) 'dot
-              (coll? %) (dotify %)
-              :else %)
-       (macroexpand-all code)))
+  (cond
+   (coll? code)
+   (map #(cond (= % '.) 'dot
+               (coll? %) (dotify %)
+               :else %)
+        (macroexpand-all code))
+   (= '. code) 'dot
+   :else code))
 
 (declare tester)
 
 (defn sandbox [tester & {:keys [timeout namespace]
                          :or {timeout 10000 namespace (gensym "sandbox")}}]
-  (fn [code]
+  (fn [code & [bindings]]
     (if-let [problem (check-form code tester)]
       (throw (SecurityException. (str "You tripped the alarm! " problem " is bad!")))
       (thunk-timeout
@@ -61,5 +67,6 @@
                  (throw
                   (SecurityException.
                    (str "Tried to call " method " on " object ". This is not allowed."))))))
-           (eval (dotify code))))
+           (push-thread-bindings bindings)
+           (try (eval (dotify code)) (finally (pop-thread-bindings)))))
        timeout))))
