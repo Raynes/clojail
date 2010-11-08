@@ -1,6 +1,10 @@
 (ns clojail.core
-  (:use [clojure.walk :only [macroexpand-all]])
+  (:use [clojure.walk :only [macroexpand-all]]
+        clojail.jvm)
   (:import (java.util.concurrent TimeoutException TimeUnit FutureTask)))
+
+(defn enable-security-manager []
+  (System/setSecurityManager (SecurityManager.)))
 
 (defn thunk-timeout [thunk seconds]
       (let [task (FutureTask. thunk)
@@ -46,8 +50,10 @@
 
 (declare tester)
 
-(defn sandbox [tester & {:keys [timeout namespace]
-                         :or {timeout 10000 namespace (gensym "sandbox")}}]
+(defn sandbox [tester & {:keys [timeout namespace context jvm?]
+                         :or {timeout 10000 namespace (gensym "sandbox")
+                              context (-> (empty-perms-list) domain context) jvm? true}}]
+  (when jvm? (enable-security-manager))
   (fn [code & [bindings]]
     (if-let [problem (check-form code tester)]
       (throw (SecurityException. (str "You tripped the alarm! " problem " is bad!")))
@@ -67,6 +73,8 @@
                  (throw
                   (SecurityException.
                    (str "Tried to call " method " on " object ". This is not allowed."))))))
-           (push-thread-bindings bindings)
-           (try (eval (dotify code)) (finally (pop-thread-bindings)))))
+           (when bindings (push-thread-bindings bindings))
+           (jvm-sandbox
+            (fn [] (try (eval (dotify code)) (finally (pop-thread-bindings))))
+            context)))
        timeout))))
