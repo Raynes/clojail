@@ -52,10 +52,9 @@
            (refer 'clojure.core)
            (eval
             '(defmacro dot [object method & args]
-               (prn "blah")
                (if (not
                     (or (-> object class pr-str symbol clojail.core/tester)
-                        (-> object pr-str symbol clojail.core/tester)
+                        (-> object pr-str symbol resolve pr-str symbol clojail.core/tester)
                         (clojail.core/tester method)))
                  `(. ~object ~method ~@args)
                  (throw (Exception. "Sandbox error!1!")))))
