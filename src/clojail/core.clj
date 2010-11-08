@@ -50,6 +50,13 @@
 
 (declare tester)
 
+(defn when-push [bindings code]
+  (if bindings
+    (try (push-thread-bindings bindings)
+         (code)
+         (finally (pop-thread-bindings)))
+    (code)))
+
 (defn sandbox [tester & {:keys [timeout namespace context jvm?]
                          :or {timeout 10000 namespace (gensym "sandbox")
                               context (-> (empty-perms-list) domain context) jvm? true}}]
@@ -73,8 +80,5 @@
                  (throw
                   (SecurityException.
                    (str "Tried to call " method " on " object ". This is not allowed."))))))
-           (when bindings (push-thread-bindings bindings))
-           (jvm-sandbox
-            (fn [] (try (eval (dotify code)) (finally (pop-thread-bindings))))
-            context)))
+           (when-push bindings #(jvm-sandbox (fn [] (eval (dotify code))) context))))
        timeout))))
