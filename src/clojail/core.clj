@@ -40,8 +40,12 @@
 
 (def ^:private mutilate (comp separate collify macroexpand-all))
 
-(defn- check-form [form sandbox-set]
-  (some sandbox-set (mutilate form)))
+(defn- check-form [form tester]
+  (if (set? tester)
+    (some tester (mutilate form))
+    (let [{:keys [whitelist blacklist]} tester]
+      (or (some #(and (symbol? %) (not (whitelist %)) %) form)
+          (and blacklist (some blacklist form))))))
 
 (defn- dotify [code]
   (cond
@@ -59,8 +63,11 @@
     (code)))
 
 (defn sandbox
-  "This function creates a new sandbox from a tester (a set of symbols that make up a blacklist)
-   and optional arguments.
+  "This function creates a new sandbox from a tester (a set of symbols that make up a blacklist
+   and possibly a whitelist) and optional arguments. A tester can either be a plain set of symbols,
+   in which case it'll be treated as a blacklist. Otherwise, you can provide a map of :whitelist and
+   :blacklist bound to sets. In this case, the whitelist and blacklist will both be used. If you only
+   want a whitelist, just supply :whitelist in the map.
 
    Optional arguments are as follows:
    :timeout, default is 10000 MS or 10 seconds. If the expression evaluated in the sandbox takes
