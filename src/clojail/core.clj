@@ -45,8 +45,7 @@
 
 (defn- dotify [code]
   (cond
-   (coll? code)
-   (postwalk #(if (= % '.) 'dot %) (macroexpand-all code))
+   (coll? code) (postwalk #(if (= % '.) 'dot %) (macroexpand-all code))
    (= '. code) 'dot
    :else code))
 
