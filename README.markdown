@@ -48,11 +48,20 @@ Wait... nil? It's doing the right thing and printing output to *out* and returni
 
 There we go! Great!
 
+Clojail can also create sandboxes based on a whitelist and a combination of whitelist and blacklist.
+
+    (def sb (sandbox {:whitelist #{'println '+}})) ; Creates a new sandbox based on a whitelist.
+
+If you try to evaluate anything in the sandbox that isn't whitelisted, it'll go boom.
+
+You can also supply a blacklist along with the whitelist.
+
+    (def sb (sandbox {:whitelist #{'println '+} :blacklist #{'println}}))
+
+This sandbox whitelists println and then blacklists it, essentially doing absolutely nothing.
+
 Well, that's about all folks. I hope my library is to your liking, and I hope it's useful in your own projects. Remember to not hesitate to give me feedback!
 
-## Things I don't yet have that you might want
-
-Clojail doesn't yet allow for you to whitelist things. I'm sure that whitelisting is useful in the long term, but blacklisting is much more useful in general, so that's what I took priority in. I do plan to offer some sort of whitelisting.
 
 ## License
 
