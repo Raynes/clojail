@@ -44,12 +44,17 @@
 (defn- check-form [form sandbox-set]
   (some sandbox-set (mutilate form)))
 
-(defmethod fmap clojure.lang.LazySeq [f s] (fmap f (into '() s)))
+(defmethod fmap clojure.lang.LazySeq [f s] (map f s))
+
+(defn- if-plist-reverse [coll]
+  (if (= (type coll) clojure.lang.PersistentList)
+    (reverse coll)
+    coll))
 
 (defn- dotify [code]
   (cond
    (coll? code)
-   (reverse
+   (if-plist-reverse
     (fmap #(cond (= % '.) 'dot
                  (coll? %) (dotify %)
                  :else %)
