@@ -4,7 +4,7 @@ Welcome to the wonderful world of clojail! Clojail is a library for sandboxing C
 
 One of the primary reasons for writing clojail is to replace clj-sandbox in my own personal projects. I'm also trying my best to make sure that it's useful for other people and their unpredictable needs as well. If you have any questions, ideas, or feedback, shoot me a message here on Github or in an email. Feedback of all kind is welcome!
 
-This project is very new. The sandbox *appears* to work properly, but that does not mean it will. The more people that use and test this project, the faster it'll be totally secure. Note that I *will* be using this library in my own projects very soon, and if I find any security flaws or any are reported to me, they will be fixed as fast as possible. If you find what you think is a bug, create an issue here on Github.
+This project is very new. The sandbox *appears* to work properly, but that does not mean it will. The more people that use and test this project, the faster it'll be totally secure. Note that I *am* using this library in my own projects, and if I find any security flaws or any are reported to me, they will be fixed as fast as possible. If you find what you think is a bug, create an issue here on Github.
 
 ## Usage
 
