@@ -1,8 +1,7 @@
 (ns ^{:doc "Defines simple Clojure sandboxing functionality."}
   clojail.core
-  (:use [clojure.walk :only [macroexpand-all]]
-        clojail.jvm
-        [clojure.contrib.generic.functor :only [fmap]])
+  (:use [clojure.walk :only [macroexpand-all postwalk]]
+        clojail.jvm)
   (:import (java.util.concurrent TimeoutException TimeUnit FutureTask)))
 
 (defn enable-security-manager
@@ -44,21 +43,10 @@
 (defn- check-form [form sandbox-set]
   (some sandbox-set (mutilate form)))
 
-(defmethod fmap clojure.lang.LazySeq [f s] (map f s))
-
-(defn- if-plist-reverse [coll]
-  (if (= (type coll) clojure.lang.PersistentList)
-    (reverse coll)
-    coll))
-
 (defn- dotify [code]
   (cond
    (coll? code)
-   (if-plist-reverse
-    (fmap #(cond (= % '.) 'dot
-                 (coll? %) (dotify %)
-                 :else %)
-          (macroexpand-all code)))
+   (postwalk #(if (= % '.) 'dot %) (macroexpand-all code))
    (= '. code) 'dot
    :else code))
 
