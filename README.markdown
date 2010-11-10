@@ -19,7 +19,7 @@ Once you've got that set up, you can play with the sandbox. Let's create a sandb
     (ns my.project
       (:use clojail.core)) ; Pull in the library.
     
-    (def tester #{'alter-var-root 'java.lang.Thread}) ; Create a blacklist.
+    (def tester #{'alter-var-root java.lang.Thread}) ; Create a blacklist.
     (def sb (sandbox tester :timeout 5000))
 
 You have just created a new sandbox. This sandbox will trigger whenever java.lang.Thread or alter-var-root is used in code. Anything else will pass the sandbox and be executed. Simple enough, right? Also, the :timeout bit is an optional argument. We've just lowered the timeout time to 5000 milliseconds, or 5 seconds. The default is 10000.
@@ -61,6 +61,17 @@ You can also supply a blacklist along with the whitelist.
 This sandbox whitelists println and then blacklists it, essentially doing absolutely nothing.
 
 Well, that's about all folks. I hope my library is to your liking, and I hope it's useful in your own projects. Remember to not hesitate to give me feedback!
+
+### Testers
+
+A tester is either a set of symbols, packages, and classes, in which case it's a blacklist, or it's a map with keys :whitelist and :blacklist (not necessarily both) bound to sets defining a blacklist and/or whitelist.
+
+A nice feature of clojail is that you can blacklist (or whitelist) entire Java packages. Don't want anything in the java.lang.reflect package? Fine:
+
+    (use '[clojail.testers :only [p]])
+    (def reflect-blacklist #{(p "java.lang.reflect")})
+
+Now you have a tester that will scream murder if someone tries to execute code using any classes from the reflect package.
 
 
 ## License
