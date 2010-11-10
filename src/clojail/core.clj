@@ -30,9 +30,12 @@
   (flatten
    (map
     #(if (symbol? %)
-       (if-let [s-meta (-> % resolve meta)]
-         ((juxt (comp symbol str :ns) :name) s-meta)
-         (-> % str (.split "/") (->> (map symbol))))
+       (let [resolved-s (resolve %)]
+         (if-let [s-meta (meta resolved-s)]
+           ((juxt (comp symbol str :ns) :name) s-meta)
+           (if (= Class (class resolved-s))
+             resolved-s
+             (-> % str (.split "/") (->> (map symbol))))))
        %)
     s)))
 
@@ -106,12 +109,12 @@
                `(let [obj-class# (class ~object)]
                   (if-not
                       (some (if (map? clojail.core/tester)
-                              (let [{:keys [blacklist whitelist]} tester]
+                              (let [{:keys [blacklist# whitelist#]} clojail.core/tester]
                                 (fn [target#]
-                                  (or (and whitelist (whitelist target#) target#)
-                                      (and blacklist (blacklist clojail.core/tester) target#))))
+                                  (or (and whitelist# (not (whitelist# target#)) target#)
+                                      (and blacklist# (blacklist# target#)))))
                               clojail.core/tester)
-                            [obj-class# (.getPackage obj-class#)] )
+                            [obj-class# (.getPackage obj-class#)])
                     (. ~object ~method ~@args)
                     (throw
                      (SecurityException.
