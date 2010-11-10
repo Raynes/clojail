@@ -104,7 +104,8 @@
             '(defmacro dot [object method & args]
                `(let [obj-class# (class ~object)]
                   (if-not
-                      (or (clojail.core/tester obj-class#) (-> obj-class# .getPackage clojail.core/tester))
+                      (some clojail.core/tester
+                            [obj-class# (.getPackage obj-class#)] )
                     (. ~object ~method ~@args)
                     (throw
                      (SecurityException.
