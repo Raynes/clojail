@@ -6,4 +6,4 @@
      secure-tester
      #{'alter-var-root 'intern 'def 'eval 'catch
        'load-string 'load-reader 'addMethod 'ns-resolve
-       'clojure.lang.IRef 'clojure.lang.ARef 'clojure.lang.Ref})
+       'clojure.lang.Ref 'clojure.lang.Reflector 'java.lang.reflect})
