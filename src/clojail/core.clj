@@ -102,17 +102,12 @@
            (refer 'clojure.core)
            (eval
             '(defmacro dot [object method & args]
-               (let [str-method (-> method symbol str)]
-                 `(let [x# ~object]
-                    (if-not
-                        (or (-> x# class pr-str symbol clojail.core/tester)
-                            (when-let [resolve-class# (-> x# class pr-str symbol try-resolve)]
-                              (-> resolve-class# pr-str symbol clojail.core/tester)
-                              (-> resolve-class# .getPackage .getName symbol clojail.core/tester))
-                            (clojail.core/tester (symbol ~str-method)))
-                      (. ~object ~method ~@args)
-                      (throw
-                       (SecurityException.
-                        (str "Tried to call " ~str-method " on " x# ". This is not allowed."))))))))
+               `(let [obj-class# (class ~object)]
+                  (if-not
+                      (or (clojail.core/tester obj-class#) (-> obj-class# .getPackage clojail.core/tester))
+                    (. ~object ~method ~@args)
+                    (throw
+                     (SecurityException.
+                      (str "You tripped the alarm! " obj-class# " is bad!")))))))
            (when-push bindings #(jvm-sandbox (fn [] (eval (dotify code))) context))))
        timeout))))
