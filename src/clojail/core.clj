@@ -62,6 +62,8 @@
          (finally (pop-thread-bindings)))
     (code)))
 
+(defn try-resolve [s] (try (resolve s) (catch ClassNotFoundException _ nil)))
+
 (defn sandbox
   "This function creates a new sandbox from a tester (a set of symbols that make up a blacklist
    and possibly a whitelist) and optional arguments. A tester can either be a plain set of symbols,
@@ -100,13 +102,17 @@
            (refer 'clojure.core)
            (eval
             '(defmacro dot [object method & args]
-               (if (not
-                    (or (-> object class pr-str symbol clojail.core/tester)
-                        (-> object pr-str symbol resolve pr-str symbol clojail.core/tester)
-                        (clojail.core/tester method)))
-                 `(. ~object ~method ~@args)
-                 (throw
-                  (SecurityException.
-                   (str "Tried to call " method " on " object ". This is not allowed."))))))
+               (let [str-method (-> method symbol str)]
+                 `(let [x# ~object]
+                    (if-not
+                        (or (-> x# class pr-str symbol clojail.core/tester)
+                            (when-let [resolve-class# (-> x# class pr-str symbol try-resolve)]
+                              (-> resolve-class# pr-str symbol clojail.core/tester)
+                              (-> resolve-class# .getPackage .getName symbol clojail.core/tester))
+                            (clojail.core/tester (symbol ~str-method)))
+                      (. ~object ~method ~@args)
+                      (throw
+                       (SecurityException.
+                        (str "Tried to call " ~str-method " on " x# ". This is not allowed."))))))))
            (when-push bindings #(jvm-sandbox (fn [] (eval (dotify code))) context))))
        timeout))))
