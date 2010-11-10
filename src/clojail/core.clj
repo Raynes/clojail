@@ -41,11 +41,12 @@
 (def ^:private mutilate (comp separate collify macroexpand-all))
 
 (defn- check-form [form tester]
-  (if (set? tester)
-    (some tester (mutilate form))
-    (let [{:keys [whitelist blacklist]} tester]
-      (or (some #(and (symbol? %) (not (whitelist %)) %) form)
-          (and blacklist (some blacklist form))))))
+  (let [mutilated (mutilate form)]
+    (if (set? tester)
+      (some tester mutilated)
+      (let [{:keys [whitelist blacklist]} tester]
+        (or (some #(and (symbol? %) whitelist (not (whitelist %)) %) mutilated)
+            (and blacklist (some blacklist mutilated)))))))
 
 (defn- dotify [code]
   (cond
@@ -93,7 +94,7 @@
   (when jvm? (enable-security-manager))
   (fn [code & [bindings]]
     (if-let [problem (check-form code tester)]
-      (throw (SecurityException. (str "You tripped the alarm! " problem " is bad!")))
+      (throw (SecurityException. (str "You tripped the alarm! " problem " is bad!1")))
       (thunk-timeout
        (fn []
          (binding [*ns* (create-ns namespace)
@@ -104,7 +105,12 @@
             '(defmacro dot [object method & args]
                `(let [obj-class# (class ~object)]
                   (if-not
-                      (some clojail.core/tester
+                      (some (if (map? clojail.core/tester)
+                              (let [{:keys [blacklist whitelist]} tester]
+                                (fn [target#]
+                                  (or (and whitelist (whitelist target#) target#)
+                                      (and blacklist (blacklist clojail.core/tester) target#))))
+                              clojail.core/tester)
                             [obj-class# (.getPackage obj-class#)] )
                     (. ~object ~method ~@args)
                     (throw
