@@ -19,11 +19,11 @@
       (.get task seconds TimeUnit/MILLISECONDS)
           (catch TimeoutException e
             (.cancel task true)
-            (.stop thr (Exception. "Thread stopped!")) 
+            (.stop thr) 
             (throw (TimeoutException. "Execution timed out.")))
 	  (catch Exception e
 	    (.cancel task true)
-	    (.stop thr (Exception. "Thread stopped!")) 
+	    (.stop thr) 
 	    (throw e)))))
 
 (defn- separate [s]
