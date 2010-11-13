@@ -43,7 +43,9 @@
 
 (def ^:private mutilate (comp separate collify macroexpand-all))
 
-(defn- check-form [form tester]
+(defn check-form
+  "Check a form to see if it trips a tester."
+  [form tester]
   (let [mutilated (mutilate form)]
     (if (set? tester)
       (some tester mutilated)
