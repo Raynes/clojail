@@ -4,4 +4,5 @@
                  [clojure-contrib "1.2.0"]]
   :dev-dependencies [[swank-clojure "1.2.1"]
                      [cake-autodoc "0.0.1-SNAPSHOT"]]
-  :tasks [cake-autodoc.tasks])
+  :tasks [cake-autodoc.tasks]
+  :main clojail.main)
