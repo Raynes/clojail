@@ -10,7 +10,7 @@ This project is very new. The sandbox *appears* to work properly, but that does 
 
 You can get this library from clojars via [cake](http://github.com/ninjudd/cake) or [leiningen](http://github.com/technomancy/leiningen). The instructions are the same.
 
-First, add `[clojail "0.1.0-SNAPSHOT"]` to your :dependencies in project.clj. After than, just run `cake deps` or `lein deps` if you use Leiningen.
+First, add `[clojail "0.1.0"]` to your :dependencies in project.clj. After than, just run `cake deps` or `lein deps` if you use Leiningen.
 
 Because clojail employs the JVM's built in sandboxing, you'll need to have a `~/.java.policy` file to define permissions for your own code. If you don't do this, you'll get security exceptions. I've included a very liberal `example.policy` file that you can just copy over to `~/.java.policy`.
 
