@@ -11,7 +11,7 @@
      [nojvm? "Turn off the JVM sandbox. Not a good idea."]
      [nostacktrace? "Turn off stack traces. Just print the root cause of all thrown exceptions."]
      [expr e "Expression to evaluate."]]
-    (let [sb (sandbox secure-tester :timeout timeout :jvm? (not nojvm?))]
+    (let [sb (sandbox secure-tester :timeout (Integer/parseInt (str timeout)) :jvm? (not nojvm?))]
       (with-open [writer (java.io.StringWriter.)]
         (binding [*read-eval* false]
           (println
