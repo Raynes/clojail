@@ -107,17 +107,16 @@
            (eval
             '(defmacro dot [object method & args]
                `(let [obj-class# (class ~object)]
-                  (if-not
-                      (some (if (map? clojail.core/tester)
+                  (if-let [bad#
+                           (some
+                            (if (map? clojail.core/tester)
                               (let [{:keys [blacklist# whitelist#]} clojail.core/tester]
                                 (fn [target#]
                                   (or (and whitelist# (not (whitelist# target#)) target#)
                                       (and blacklist# (blacklist# target#)))))
                               clojail.core/tester)
-                            [obj-class# (.getPackage obj-class#)])
-                    (. ~object ~method ~@args)
-                    (throw
-                     (SecurityException.
-                      (str "You tripped the alarm! " obj-class# " is bad!")))))))
+                            [obj-class# ~object (.getPackage obj-class#)])]
+                    (throw (SecurityException. (str "You tripped the alarm! " bad# " is bad!")))
+                    (. ~object ~method ~@args)))))
            (when-push bindings #(jvm-sandbox (fn [] (eval (dotify code))) context))))
        timeout))))
