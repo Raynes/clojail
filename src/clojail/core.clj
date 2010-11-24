@@ -97,7 +97,7 @@
   (when jvm? (enable-security-manager))
   (fn [code & [bindings]]
     (if-let [problem (check-form code tester)]
-      (throw (SecurityException. (str "You tripped the alarm! " problem " is bad!1")))
+      (throw (SecurityException. (str "You tripped the alarm! " problem " is bad!")))
       (thunk-timeout
        (fn []
          (binding [*ns* (create-ns namespace)
