@@ -9,5 +9,6 @@
 (def ^{:doc "A somewhat secure tester. No promises."}
      secure-tester
      #{'alter-var-root 'intern 'def 'eval 'catch
-       'load-string 'load-reader 'addMethod 'ns-resolve
-       clojure.lang.Ref clojure.lang.Reflector (p "java.lang.reflect")})
+       'load-string 'load-reader 'addMethod 'ns-resolve 'resolve
+       '*read-eval* clojure.lang.Ref clojure.lang.Reflector
+       (p "java.lang.reflect")})
