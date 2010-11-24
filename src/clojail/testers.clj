@@ -10,5 +10,5 @@
      secure-tester
      #{'alter-var-root 'intern 'def 'eval 'catch
        'load-string 'load-reader 'addMethod 'ns-resolve 'resolve
-       '*read-eval* clojure.lang.Ref clojure.lang.Reflector
+       '*read-eval* clojure.lang.Ref clojure.lang.Reflector 'ns-publics
        (p "java.lang.reflect")})
