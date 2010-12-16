@@ -11,5 +11,5 @@
      #{'alter-var-root 'intern 'def 'eval 'catch
        'load-string 'load-reader 'addMethod 'ns-resolve 'resolve
        '*read-eval* clojure.lang.Ref clojure.lang.Reflector 'ns-publics
-       'ns-map 'ns-interns 'the-ns clojure.lang.Namespace
+       'ns-unmap 'ns-map 'ns-interns 'the-ns clojure.lang.Namespace
        (p "java.lang.reflect")})
