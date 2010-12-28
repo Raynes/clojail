@@ -99,7 +99,8 @@
                   context (-> (empty-perms-list) domain context) jvm? true}}]
   (when jvm? (enable-security-manager))
   (let [tester-str (with-out-str
-                     (print-dup tester *out*))]
+                     (binding [*print-dup* true]
+                       (pr tester)))]
     (fn [code & [bindings]]
       (if-let [problem (check-form code tester)]
         (throw (SecurityException. (str "You tripped the alarm! " problem " is bad!")))
@@ -109,25 +110,26 @@
                      *read-eval* false]
              (refer 'clojure.core)
              (let [code
-                   `(let [tester-obj# (binding [*read-eval* true]
-                                        (read-string ~tester-str))
-                          tester-fn# (if (map? tester-obj#)
-                                       (let [{blacklist# :blacklist,
-                                              whitelist# :whitelist} tester-obj#]
-                                         (fn [target#]
-                                           (or (and whitelist# (not (whitelist# target#)) target#)
-                                               (and blacklist# (blacklist# target#)))))
-                                       tester-obj#)]
+                   `(do
                       (defmacro ~'dot [object# method# & args#]
-                        `(let [obj# ~object#
-                               obj-class# (class obj#)]
-                           (if-let [bad#
-                                    (some ~tester-fn#
-                                          [obj-class#
-                                           obj#
-                                           (.getPackage obj-class#)])]
-                             (throw (SecurityException. (str "You tripped the alarm! " bad# " is bad!")))
+                        `(let [~'tester-obj# (binding [*read-eval* true]
+                                               (read-string ~~tester-str))
+                               ~'tester-fn# (if (map? ~'tester-obj#)
+                                              (let [{~'blacklist# :blacklist,
+                                                     ~'whitelist# :whitelist} ~'tester-obj#]
+                                                (fn [~'target#]
+                                                  (or (and ~'whitelist# (not (~'whitelist# ~'target#)) ~'target#)
+                                                      (and ~'blacklist# (~'blacklist# ~'target#)))))
+                                              ~'tester-obj#)
+                               ~'obj# ~object#
+                               ~'obj-class# (class ~'obj#)]
+                           (if-let [~'bad#
+                                    (some ~'tester-fn#
+                                          [~'obj-class#
+                                           ~'obj#
+                                           (.getPackage ~'obj-class#)])]
+                             (throw (SecurityException. (str "You tripped the alarm! " ~'bad# " is bad!")))
                              (. ~object# ~method# ~@args#))))
-                      ~(dotify code))])
-             (when-push bindings #(jvm-sandbox (fn [] (eval code)) context))))
+                      ~(dotify code))]
+               (when-push bindings #(jvm-sandbox (fn [] (eval code)) context)))))
          timeout)))))

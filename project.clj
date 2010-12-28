@@ -1,4 +1,4 @@
-(defproject clojail "0.2.1-SNAPSHOT"
+(defproject clojail "0.2.2-SNAPSHOT"
   :description "An experimental sandboxing library."
   :dependencies [[clojure "1.2.0"]
                  [clojure-contrib "1.2.0"]]

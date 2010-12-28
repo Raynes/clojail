@@ -16,7 +16,8 @@
 
 (deftest security-test
   (is (= 7 (sb '(-> "bar.txt" java.io.File. .getName .length))))
-  (is (thrown? Exception (sb '(-> java.io.File .getMethods (aget 0) .getName)))))
+  (is (thrown? Exception (sb '(-> java.io.File .getMethods (aget 0) .getName))))
+  (is (thrown? Exception (sb '(-> java.io.File .getMethods (aget 0) ((memfn getName)))))))
 
 (deftest sandbox-config-test
   (is (string? (easy '(-> java.io.File .getMethods (aget 0) .getName)))))
@@ -26,3 +27,6 @@
   (is (thrown? Exception (wbsb '(+ 3 3))))
   (is (= (java.io.File. "") (wbsb '(java.io.File. ""))))
   (is (thrown? Exception (wbsb '(java.lang.Math/abs 10)))))
+
+(deftest lazy-dot-test
+  (is (= [0 0] (sb '(map #(.length %) ["" ""])))))
