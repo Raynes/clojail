@@ -1,5 +1,4 @@
-(ns ^{:doc "Defines simple Clojure sandboxing functionality."}
-  clojail.core
+(ns clojail.core
   (:use [clojure.walk :only [macroexpand-all postwalk]]
         clojail.jvm)
   (:import (java.util.concurrent TimeoutException TimeUnit FutureTask)))
@@ -59,7 +58,11 @@
    (= '. code) 'dot
    :else code))
 
-(declare tester)
+(defmethod print-dup java.lang.Package
+  ([p out]
+     (.write out (str "#=(java.lang.Package/getPackage \""
+                      (.getName p)
+                      "\")"))))
 
 (defn- when-push [bindings code]
   (if bindings
@@ -95,28 +98,36 @@
              :or {timeout 10000 namespace (gensym "sandbox")
                   context (-> (empty-perms-list) domain context) jvm? true}}]
   (when jvm? (enable-security-manager))
-  (fn [code & [bindings]]
-    (if-let [problem (check-form code tester)]
-      (throw (SecurityException. (str "You tripped the alarm! " problem " is bad!")))
-      (thunk-timeout
-       (fn []
-         (binding [*ns* (create-ns namespace)
-                   *read-eval* false
-                   tester tester]
-           (refer 'clojure.core)
-           (eval
-            '(defmacro dot [object method & args]
-               `(let [obj-class# (class ~object)]
-                  (if-let [bad#
-                           (some
-                            (if (map? clojail.core/tester)
-                              (let [{:keys [blacklist# whitelist#]} clojail.core/tester]
-                                (fn [target#]
-                                  (or (and whitelist# (not (whitelist# target#)) target#)
-                                      (and blacklist# (blacklist# target#)))))
-                              clojail.core/tester)
-                            [obj-class# ~object (.getPackage obj-class#)])]
-                    (throw (SecurityException. (str "You tripped the alarm! " bad# " is bad!")))
-                    (. ~object ~method ~@args)))))
-           (when-push bindings #(jvm-sandbox (fn [] (eval (dotify code))) context))))
-       timeout))))
+  (let [tester-str (with-out-str
+                     (print-dup tester *out*))]
+    (fn [code & [bindings]]
+      (if-let [problem (check-form code tester)]
+        (throw (SecurityException. (str "You tripped the alarm! " problem " is bad!")))
+        (thunk-timeout
+         (fn []
+           (binding [*ns* (create-ns namespace)
+                     *read-eval* false]
+             (refer 'clojure.core)
+             (let [code
+                   `(let [tester-obj# (binding [*read-eval* true]
+                                        (read-string ~tester-str))
+                          tester-fn# (if (map? tester-obj#)
+                                       (let [{blacklist# :blacklist,
+                                              whitelist# :whitelist} tester-obj#]
+                                         (fn [target#]
+                                           (or (and whitelist# (not (whitelist# target#)) target#)
+                                               (and blacklist# (blacklist# target#)))))
+                                       tester-obj#)]
+                      (defmacro ~'dot [object# method# & args#]
+                        `(let [obj# ~object#
+                               obj-class# (class obj#)]
+                           (if-let [bad#
+                                    (some ~tester-fn#
+                                          [obj-class#
+                                           obj#
+                                           (.getPackage obj-class#)])]
+                             (throw (SecurityException. (str "You tripped the alarm! " bad# " is bad!")))
+                             (. ~object# ~method# ~@args#))))
+                      ~(dotify code))])
+             (when-push bindings #(jvm-sandbox (fn [] (eval code)) context))))
+         timeout)))))
