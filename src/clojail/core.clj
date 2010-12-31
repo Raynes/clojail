@@ -102,7 +102,8 @@
            (binding [*ns* (create-ns namespace)
                      *read-eval* false]
              (refer 'clojure.core)
-             (let [code
+             (let [bindings (or bindings {})
+                   code
                    `(do
                       (defmacro ~'dot [object# method# & args#]
                         `(let [~'tester-obj# (binding [*read-eval* true]
