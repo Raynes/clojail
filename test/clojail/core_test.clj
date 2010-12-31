@@ -30,3 +30,6 @@
 
 (deftest lazy-dot-test
   (is (= [0 0] (sb '(map #(.length %) ["" ""])))))
+
+(deftest binding-test
+  (is (= 2 (sb '(#'inc 2) {#'inc identity}))))
