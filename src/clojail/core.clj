@@ -64,13 +64,6 @@
                       (.getName p)
                       "\")"))))
 
-(defn- when-push [bindings code]
-  (if bindings
-    (try (push-thread-bindings bindings)
-         (code)
-         (finally (pop-thread-bindings)))
-    (code)))
-
 (defn sandbox
   "This function creates a new sandbox from a tester (a set of symbols that make up a blacklist
    and possibly a whitelist) and optional arguments. A tester can either be a plain set of symbols,
@@ -130,6 +123,6 @@
                                            (.getPackage ~'obj-class#)])]
                              (throw (SecurityException. (str "You tripped the alarm! " ~'bad# " is bad!")))
                              (. ~object# ~method# ~@args#))))
-                      ~(dotify code))]
-               (when-push bindings #(jvm-sandbox (fn [] (eval code)) context)))))
+                      ~(with-bindings bindings (dotify code)))]
+               (jvm-sandbox #(with-bindings bindings (eval code)) context))))
          timeout)))))
