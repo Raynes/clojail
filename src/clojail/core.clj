@@ -7,17 +7,25 @@
   "Enable the JVM security manager. The sandbox can do this for you."
   [] (System/setSecurityManager (SecurityManager.)))
 
+(def uglify-time-unit
+  (into {} (for [[enum aliases] {TimeUnit/NANOSECONDS [:ns :nanoseconds]
+                                 TimeUnit/MICROSECONDS [:us :microseconds]
+                                 TimeUnit/MILLISECONDS [:ms :milliseconds]
+                                 TimeUnit/SECONDS [:s :sec :seconds]}
+                 alias aliases]
+             {alias enum})))
+
 (defn thunk-timeout
   "Takes a function and an amount of time in ms to wait for the function to finish
   executing. The sandbox can do this for you."
   ([thunk ms]
-     (thunk-timeout ms TimeUnit/MILLISECONDS))
+     (thunk-timeout thunk ms :ms))
   ([thunk time unit]
      (let [task (FutureTask. thunk)
            thr (Thread. task)]
        (try
          (.start thr)
-         (.get task time unit)
+         (.get task time (or (uglify-time-unit unit) unit))
          (catch TimeoutException e
            (.cancel task true)
            (.stop thr) 
