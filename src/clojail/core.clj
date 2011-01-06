@@ -22,8 +22,13 @@
      (thunk-timeout thunk ms :ms))
   ([thunk time unit]
      ;; postwalk is like a magical recursive doall, to force lazy-seqs
-     ;; within the timeout context
-     (let [task (FutureTask. #(postwalk identity (thunk)))
+     ;; within the timeout context; but since it doesn't maintain
+     ;; perfect structure for *every* data type, we want to actually
+     ;; return the original value after we force it, not the result of
+     ;; postwalk replacement
+     (let [task (FutureTask. #(doto (thunk)
+                                (-> (->> (postwalk identity))
+                                    (try (catch Throwable _)))))
            thr (Thread. task)]
        (try
          (.start thr)
