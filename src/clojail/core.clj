@@ -10,20 +10,22 @@
 (defn thunk-timeout
   "Takes a function and an amount of time in ms to wait for the function to finish
   executing. The sandbox can do this for you."
-  [thunk seconds]
-  (let [task (FutureTask. thunk)
-        thr (Thread. task)]
-    (try
-      (.start thr)
-      (.get task seconds TimeUnit/MILLISECONDS)
-          (catch TimeoutException e
-            (.cancel task true)
-            (.stop thr) 
-            (throw (TimeoutException. "Execution timed out.")))
-	  (catch Exception e
-	    (.cancel task true)
-	    (.stop thr) 
-	    (throw e)))))
+  ([thunk ms]
+     (thunk-timeout ms TimeUnit/MILLISECONDS))
+  ([thunk time unit]
+     (let [task (FutureTask. thunk)
+           thr (Thread. task)]
+       (try
+         (.start thr)
+         (.get task time unit)
+         (catch TimeoutException e
+           (.cancel task true)
+           (.stop thr) 
+           (throw (TimeoutException. "Execution timed out.")))
+         (catch Exception e
+           (.cancel task true)
+           (.stop thr) 
+           (throw e))))))
 
 (defn- separate [s]
   (flatten
