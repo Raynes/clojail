@@ -21,7 +21,9 @@
   ([thunk ms]
      (thunk-timeout thunk ms :ms))
   ([thunk time unit]
-     (let [task (FutureTask. thunk)
+     ;; postwalk is like a magical recursive doall, to force lazy-seqs
+     ;; within the timeout context
+     (let [task (FutureTask. #(postwalk identity (thunk)))
            thr (Thread. task)]
        (try
          (.start thr)
