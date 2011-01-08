@@ -15,20 +15,28 @@
                  alias aliases]
              {alias enum})))
 
+;; postwalk is like a magical recursive doall, to force lazy-seqs
+;; within the timeout context; but since it doesn't maintain perfect
+;; structure for *every* data type, we want to actually return the
+;; original value after we force it, not the result of postwalk
+;; replacement
+(defn eagerly-consume
+  "Recursively force all lazy-seqs in val."
+  [val]
+  (try
+    (postwalk identity val)
+    (catch Throwable _))
+  val)
+
 (defn thunk-timeout
   "Takes a function and an amount of time in ms to wait for the function to finish
   executing. The sandbox can do this for you."
   ([thunk ms]
      (thunk-timeout thunk ms :ms))
   ([thunk time unit]
-     ;; postwalk is like a magical recursive doall, to force lazy-seqs
-     ;; within the timeout context; but since it doesn't maintain
-     ;; perfect structure for *every* data type, we want to actually
-     ;; return the original value after we force it, not the result of
-     ;; postwalk replacement
-     (let [task (FutureTask. #(doto (thunk)
-                                (-> (->> (postwalk identity))
-                                    (try (catch Throwable _)))))
+     (thunk-timeout thunk time unit identity))
+  ([thunk time unit transform]
+     (let [task (FutureTask. (comp transform thunk))
            thr (Thread. task)]
        (try
          (.start thr)
@@ -95,6 +103,7 @@
    :context, the context for the JVM sandbox to run in. Only relevant if :jvm? is true. It has a sane
    default, so you shouldn't need to worry about this.
    :jvm?, if set to true, the JVM sandbox will be employed. It defaults to true.
+   :transform a function to call on the result returned from the sandboxed code, before returning it, while still within the timeout context.
 
    This function will return a new function that you should bind to something. You can call this
    function with code and it will be evaluated in the sandbox. The function also takes an optional
@@ -104,9 +113,10 @@
             (let [writer (java.io.StringWriter.)]
               (sb '(println \"blah\") {#'*out* writer}) (str writer))
    The above example returns \"blah\\n\""
-  [tester & {:keys [timeout namespace context jvm?]
+  [tester & {:keys [timeout namespace context jvm? transform]
              :or {timeout 10000 namespace (gensym "sandbox")
-                  context (-> (empty-perms-list) domain context) jvm? true}}]
+                  context (-> (empty-perms-list) domain context) jvm? true
+                  transform eagerly-consume}}]
   (when jvm? (enable-security-manager))
   (let [tester-str (with-out-str
                      (binding [*print-dup* true]
@@ -143,4 +153,4 @@
                              (. ~object# ~method# ~@args#))))
                       ~(with-bindings bindings (dotify code)))]
                (jvm-sandbox #(with-bindings bindings (eval code)) context))))
-         timeout)))))
+         timeout :ms transform)))))
