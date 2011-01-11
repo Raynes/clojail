@@ -1,7 +1,9 @@
 (ns clojail.core
-  (:use [clojure.walk :only [macroexpand-all postwalk]]
+  (:use clojure.stacktrace
+        [clojure.walk :only [macroexpand-all postwalk]]
         clojail.jvm)
-  (:import (java.util.concurrent TimeoutException TimeUnit FutureTask)))
+  (:import (java.util.concurrent TimeoutException TimeUnit FutureTask)
+           (clojure.lang LispReader$ReaderException)))
 
 (defn enable-security-manager
   "Enable the JVM security manager. The sandbox can do this for you."
@@ -154,3 +156,32 @@
                       ~(with-bindings bindings (dotify code)))]
                (jvm-sandbox #(with-bindings bindings (eval code)) context))))
          timeout :ms transform)))))
+
+(defn safe-read
+  "Read a string from an untrusted source. Mainly just disables read-eval,
+but also repackages thrown exceptions to make it easier to discriminate among
+them. read-eval errors will be thrown as IllegalStateException; end-of-input
+will be thrown as EOFException; other exceptions will be unchanged."
+  ([]
+     (binding [*read-eval* false]
+       (let [repackage (fn [e]
+                         (let [cause (root-cause e)
+                               msg (str (.getName (class e))
+                                        ": "
+                                        (.getMessage cause))]
+                           (if (.contains msg "EvalReader")
+                             (IllegalStateException. msg)
+                             (java.io.EOFException. msg))))]
+         (try
+           (read)
+           (catch LispReader$ReaderException e
+             (throw (repackage e)))
+           (catch Throwable e
+             (let [cause (.getCause e)]
+               (cond
+                (not cause) (throw e)
+                (not (instance? LispReader$ReaderException cause)) (throw e)
+                :else (throw (repackage cause)))))))))
+  ([str]
+     (with-in-str str
+       (safe-read))))
