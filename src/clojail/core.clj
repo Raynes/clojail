@@ -159,19 +159,18 @@
 
 (defn safe-read
   "Read a string from an untrusted source. Mainly just disables read-eval,
-but also repackages thrown exceptions to make it easier to discriminate among
-them. read-eval errors will be thrown as IllegalStateException; end-of-input
-will be thrown as EOFException; other exceptions will be unchanged."
+but also repackages thrown exceptions to make it easier to
+discriminate among them. read-eval errors will be thrown as
+IllegalStateException; other exceptions will be thrown unchanged."
   ([]
      (binding [*read-eval* false]
        (let [repackage (fn [e]
-                         (let [cause (root-cause e)
-                               msg (str (.getName (class e))
+                         (let [msg (str (.getName (class e))
                                         ": "
-                                        (.getMessage cause))]
+                                        (.getMessage (root-cause e)))]
                            (if (.contains msg "EvalReader")
                              (IllegalStateException. msg)
-                             (java.io.EOFException. msg))))]
+                             e)))]
          (try
            (read)
            (catch LispReader$ReaderException e
