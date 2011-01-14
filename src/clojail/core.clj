@@ -1,6 +1,6 @@
 (ns clojail.core
   (:use clojure.stacktrace
-        [clojure.walk :only [macroexpand-all postwalk]]
+        [clojure.walk :only [walk postwalk-replace]]
         clojail.jvm)
   (:import (java.util.concurrent TimeoutException TimeUnit FutureTask)
            (clojure.lang LispReader$ReaderException)))
@@ -26,7 +26,7 @@
   "Recursively force all lazy-seqs in val."
   [val]
   (try
-    (postwalk identity val)
+    (postwalk-replace {} val)
     (catch Throwable _))
   val)
 
@@ -67,7 +67,15 @@
 
 (defn- collify [form] (if (coll? form) form [form]))
 
-(def ^:private mutilate (comp separate collify macroexpand-all))
+(defn macroexpand-most [form]
+  (if (or
+       (not (sequential? form)) 
+       (and (seq? form) 
+            (= 'quote (first form))))
+    form
+    (walk macroexpand-most macroexpand form)))
+
+(def ^:private mutilate (comp separate collify macroexpand-most))
 
 (defn check-form
   "Check a form to see if it trips a tester."
@@ -81,7 +89,7 @@
 
 (defn- dotify [code]
   (cond
-   (coll? code) (postwalk #(if (= % '.) 'dot %) (macroexpand-all code))
+   (coll? code) (postwalk-replace '{. dot} (macroexpand-most code))
    (= '. code) 'dot
    :else code))
 
