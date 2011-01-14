@@ -9,7 +9,8 @@
 (def ^{:doc "A somewhat secure tester. No promises."}
      secure-tester
      #{'alter-var-root 'intern 'def 'eval 'catch
-       'load-string 'load-reader 'addMethod 'ns-resolve 'resolve
+       'load-string 'load-reader 'addMethod 'ns-resolve 'resolve 'find-var
        '*read-eval* clojure.lang.Ref clojure.lang.Reflector 'ns-publics
        'ns-unmap 'set! 'ns-map 'ns-interns 'the-ns clojure.lang.Namespace
+       'push-thread-bindings 'pop-thread-bindings
        (p "java.lang.reflect")})
