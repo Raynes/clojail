@@ -88,10 +88,7 @@
             (and blacklist (some blacklist mutilated)))))))
 
 (defn- dotify [code]
-  (cond
-   (coll? code) (postwalk-replace '{. dot} (macroexpand-most code))
-   (= '. code) 'dot
-   :else code))
+  (postwalk-replace '{. dot} (macroexpand-most code)))
 
 (defmethod print-dup java.lang.Package
   ([p out]
