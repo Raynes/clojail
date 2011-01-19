@@ -38,4 +38,5 @@
   (is (= 'let (sb '(first '(let [x 1] x)))))
   (is (= '(dec (clojure.core/-> x inc))
          (sb '(macroexpand '(-> x inc dec)))))
-  (is (= 1 (sb '(-> 0 inc dec inc)))))
+  (is (= 1 (sb '(-> 0 inc dec inc))))
+  (is (= '(. "" length) (sb ''(. "" length)))))
