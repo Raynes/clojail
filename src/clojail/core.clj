@@ -69,12 +69,25 @@
 
 (defn macroexpand-most [form]
   (if (or
-       (not (sequential? form)) 
+       (not (coll? form)) 
        (and (seq? form) 
             (= 'quote (first form))))
     form
     (walk macroexpand-most macroexpand form)))
 
+(defn dotify [form]
+  (if-not (coll? form)
+    form
+    (let [recurse #(walk dotify identity %)]
+      (if-not (seq? form)
+        (recurse form)
+        (let [f (first form)]
+          (case f
+                quote form
+                . (cons 'dot (recurse (rest form)))
+                (recurse form)))))))
+
+(def ensafen (comp dotify macroexpand-most))
 (def ^:private mutilate (comp separate collify macroexpand-most))
 
 (defn check-form
@@ -86,9 +99,6 @@
       (let [{:keys [whitelist blacklist]} tester]
         (or (some #(and (symbol? %) whitelist (not (whitelist %)) %) mutilated)
             (and blacklist (some blacklist mutilated)))))))
-
-(defn- dotify [code]
-  (postwalk-replace '{. dot} (macroexpand-most code)))
 
 (defmethod print-dup java.lang.Package
   ([p out]
@@ -158,7 +168,7 @@
                                            (.getPackage ~'obj-class#)])]
                              (throw (SecurityException. (str "You tripped the alarm! " ~'bad# " is bad!")))
                              (. ~object# ~method# ~@args#))))
-                      ~(with-bindings bindings (dotify code)))]
+                      ~(with-bindings bindings (ensafen code)))]
                (jvm-sandbox #(with-bindings bindings (eval code)) context))))
          timeout :ms transform)))))
 
