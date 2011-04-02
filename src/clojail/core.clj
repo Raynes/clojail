@@ -6,8 +6,6 @@
   (:import (java.util.concurrent TimeoutException TimeUnit FutureTask)
            (clojure.lang LispReader$ReaderException)))
 
-(def ^{:private true} sb (sandbox tester/secure-tester))
-
 (defn enable-security-manager
   "Enable the JVM security manager. The sandbox can do this for you."
   [] (System/setSecurityManager (SecurityManager.)))
@@ -174,6 +172,9 @@
                       ~(with-bindings bindings (ensafen code)))]
                (jvm-sandbox #(with-bindings bindings (eval code)) context))))
          timeout :ms transform)))))
+
+;; install a default sandbox for testing
+(def ^{:private true} sb (sandbox tester/secure-tester))
 
 (defn safe-read
   "Read a string from an untrusted source. Mainly just disables read-eval,
