@@ -2,8 +2,11 @@
   (:use clojure.stacktrace
         [clojure.walk :only [walk postwalk-replace]]
         clojail.jvm)
+  (:require [clojail.testers :as tester]) ;; only for debug, really
   (:import (java.util.concurrent TimeoutException TimeUnit FutureTask)
            (clojure.lang LispReader$ReaderException)))
+
+(def ^{:private true} sb (sandbox tester/secure-tester))
 
 (defn enable-security-manager
   "Enable the JVM security manager. The sandbox can do this for you."
@@ -73,7 +76,7 @@
        (and (seq? form) 
             (= 'quote (first form))))
     form
-    (walk macroexpand-most macroexpand form)))
+    (walk macroexpand-most identity (macroexpand form))))
 
 (defn dotify [form]
   (if-not (coll? form)

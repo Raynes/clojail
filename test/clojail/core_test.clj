@@ -40,3 +40,8 @@
          (sb '(macroexpand '(-> x inc dec)))))
   (is (= 1 (sb '(-> 0 inc dec inc))))
   (is (= '(. "" length) (sb ''(. "" length)))))
+
+;; make sure macros are expanded outside-in, not inside-out
+(deftest macroexpand-most-test
+  (is (= (range 1 11) (sb '(->> (inc x)
+                                (for [x (range 0 10)]))))))
