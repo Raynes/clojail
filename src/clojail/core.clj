@@ -107,9 +107,8 @@
                       (.getName p)
                       "\")"))))
 
-(defn sandbox
-  "This function creates a new sandbox from a tester (a set of symbols that make up a blacklist
-   and possibly a whitelist) and optional arguments. A tester can either be a plain set of symbols,
+(defn sandbox*
+  "This function creates a sandbox function that takes a tester. A tester can either be a plain set of symbols,
    in which case it'll be treated as a blacklist. Otherwise, you can provide a map of :whitelist and
    :blacklist bound to sets. In this case, the whitelist and blacklist will both be used. If you only
    want a whitelist, just supply :whitelist in the map.
@@ -121,7 +120,8 @@
    :context, the context for the JVM sandbox to run in. Only relevant if :jvm? is true. It has a sane
    default, so you shouldn't need to worry about this.
    :jvm?, if set to true, the JVM sandbox will be employed. It defaults to true.
-   :transform a function to call on the result returned from the sandboxed code, before returning it, while still within the timeout context.
+   :transform a function to call on the result returned from the sandboxed code, before returning it,
+   while still within the timeout context.
 
    This function will return a new function that you should bind to something. You can call this
    function with code and it will be evaluated in the sandbox. The function also takes an optional
@@ -131,15 +131,15 @@
             (let [writer (java.io.StringWriter.)]
               (sb '(println \"blah\") {#'*out* writer}) (str writer))
    The above example returns \"blah\\n\""
-  [tester & {:keys [timeout namespace context jvm? transform]
-             :or {timeout 10000 namespace (gensym "sandbox")
-                  context (-> (empty-perms-list) domain context) jvm? true
-                  transform eagerly-consume}}]
+  [& {:keys [timeout namespace context jvm? transform]
+      :or {timeout 10000 namespace (gensym "sandbox")
+           context (-> (empty-perms-list) domain context) jvm? true
+           transform eagerly-consume}}]
   (when jvm? (enable-security-manager))
-  (let [tester-str (with-out-str
-                     (binding [*print-dup* true]
-                       (pr tester)))]
-    (fn [code & [bindings]]
+  (fn [tester code & [bindings]]
+    (let [tester-str (with-out-str
+                        (binding [*print-dup* true]
+                          (pr tester)))]
       (if-let [problem (check-form code tester)]
         (throw (SecurityException. (str "You tripped the alarm! " problem " is bad!")))
         (thunk-timeout
@@ -172,6 +172,16 @@
                       ~(with-bindings bindings (ensafen code)))]
                (jvm-sandbox #(with-bindings bindings (eval code)) context))))
          timeout :ms transform)))))
+
+(defn sandbox
+  "Convenience wrapper function around sandbox* to create a sandbox function out of a tester.
+   Takes the same arguments as sandbox* with the addition of the tester argument. Returns a
+   sandbox function like sandbox* returns, the difference being that the tester is hardcoded
+   and doesn't need to be passed to the created function."
+  [tester & args]
+  (let [sb (apply sandbox* args)]
+    (fn [code & bindings]
+      (apply sb tester code bindings))))
 
 ;; install a default sandbox for testing
 (def ^{:private true} sb (sandbox tester/secure-tester))
