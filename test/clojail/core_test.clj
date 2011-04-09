@@ -45,3 +45,10 @@
 (deftest macroexpand-most-test
   (is (= (range 1 11) (sb '(->> (inc x)
                                 (for [x (range 0 10)]))))))
+
+;; sandbox* lets you change tester on the fly
+(deftest dynamic-tester-test
+  (let [dyn-sb (sandbox*)
+        code '(+ 5 5)]
+    (is (= 10 (dyn-sb #{} code)))
+    (is (thrown? SecurityException (dyn-sb '#{+} code)))))
