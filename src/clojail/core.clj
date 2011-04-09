@@ -180,8 +180,7 @@
    and doesn't need to be passed to the created function."
   [tester & args]
   (let [sb (apply sandbox* args)]
-    (fn [code & bindings]
-      (apply sb tester code bindings))))
+    (partial sb tester)))
 
 ;; install a default sandbox for testing
 (def ^{:private true} sb (sandbox tester/secure-tester))
