@@ -4,8 +4,6 @@ Welcome to the wonderful world of clojail! Clojail is a library for sandboxing C
 
 One of the primary reasons for writing clojail is to replace clj-sandbox in my own personal projects. I'm also trying my best to make sure that it's useful for other people and their unpredictable needs as well. If you have any questions, ideas, or feedback, shoot me a message here on Github or in an email. Feedback of all kind is welcome!
 
-This project is very new. The sandbox *appears* to work properly, but that does not mean it will. The more people that use and test this project, the faster it'll be totally secure. Note that I *am* using this library in my own projects, and if I find any security flaws or any are reported to me, they will be fixed as fast as possible. If you find what you think is a bug, create an issue here on Github.
-
 ## Usage
 
 You can get this library from clojars via [cake](http://github.com/ninjudd/cake) or [leiningen](http://github.com/technomancy/leiningen). The instructions are the same.
@@ -73,6 +71,15 @@ A nice feature of clojail is that you can blacklist (or whitelist) entire Java p
 
 Now you have a tester that will scream murder if someone tries to execute code using any classes from the reflect package.
 
+## Warning
+
+We can't promise that clojail will be entirely secure at any given time. Clojail uses a blacklist-based sandbox by default, so there will almost always be little holes in the sandbox. Fortunately, that only applies to the Clojure side of things. Since clojail is backed up by the JVM sandbox, even if the Clojure sandbox is broken, I/O still can't be done. Even if clojail breaks, the breaker can't wipe your system.
+
+### What can happen?
+
+If somebody finds a hole in your Clojure sandbox, all they can do is break the state of the sandbox. Meaning, if they find a way to use 'eval', they can eval any code they like. That code will still be evaluated under the JVM sandbox. They can, however, use eval to call def and redefine stuff in the sandbox. This also means they can cause out-of-memory errors by defining a bunch of stuff. You'll want to prepare for such things.
+
+We're considering making an effort to maintain a tester in clojail.testers that tries to block out *everything* that's bad. The reason we haven't undertaken that task so far is because we don't want anybody to assume that the tester is totally secure, because you can never really be certain. `secure-tester` is unfortunately named. It should be `secure-enough-tester` or `rather-secure-tester`. For the most part, secure-tester *is* secure enough. Just be aware that there will be holes, just not catastrophic ones.
 
 ## License
 
