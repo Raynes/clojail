@@ -54,17 +54,17 @@
            (throw e))))))
 
 (defn- separate [s]
-  (flatten
-   (map
-    #(if (symbol? %)
-       (let [resolved-s (resolve %)]
-         (if-let [s-meta (meta resolved-s)]
-           ((juxt (comp symbol str :ns) :name) s-meta)
-           (if (= Class (class resolved-s))
-             resolved-s
-             (-> % str (.split "/") (->> (map symbol))))))
-       %)
-    s)))
+  (set
+   (flatten
+    (map #(if (symbol? %)
+            (let [resolved-s (resolve %)]
+              (if-let [s-meta (meta resolved-s)]
+                ((juxt (comp symbol str :ns) :name) s-meta)
+                (if (= Class (class resolved-s))
+                  resolved-s
+                  (-> % str (.split "/") (->> (map symbol))))))
+            %)
+         (flatten s)))))
 
 (defn- collify [form] (if (coll? form) form [form]))
 
@@ -89,7 +89,7 @@
                 (recurse form)))))))
 
 (def ensafen (comp dotify macroexpand-most))
-(def ^:private mutilate (comp separate collify macroexpand-most))
+(def ^{:private true} mutilate (comp separate collify macroexpand-most))
 
 (defn check-form
   "Check a form to see if it trips a tester."

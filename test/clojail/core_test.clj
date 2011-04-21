@@ -17,7 +17,8 @@
 (deftest security-test
   (is (= 7 (sb '(-> "bar.txt" java.io.File. .getName .length))))
   (is (thrown? Exception (sb '(-> java.io.File .getMethods (aget 0) .getName))))
-  (is (thrown? Exception (sb '(-> java.io.File .getMethods (aget 0) ((memfn getName)))))))
+  (is (thrown? Exception (sb '(-> java.io.File .getMethods (aget 0) ((memfn getName))))))
+  (is (thrown? Exception (sb '(inc (clojure.core/eval 1))))))
 
 (deftest sandbox-config-test
   (is (string? (easy '(-> java.io.File .getMethods (aget 0) .getName)))))
@@ -51,4 +52,5 @@
   (let [dyn-sb (sandbox*)
         code '(+ 5 5)]
     (is (= 10 (dyn-sb #{} code)))
-    (is (thrown? SecurityException (dyn-sb '#{+} code)))))
+    (is (thrown? SecurityException (dyn-sb '#{+} code)))
+    (is (thrown? SecurityException (dyn-sb #{'eval} 'clojure.core/eval)))))
