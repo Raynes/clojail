@@ -54,3 +54,7 @@
     (is (= 10 (dyn-sb #{} code)))
     (is (thrown? SecurityException (dyn-sb '#{+} code)))
     (is (thrown? SecurityException (dyn-sb #{'eval} 'clojure.core/eval)))))
+
+(deftest namespace-forbid-test
+  (let [sb (sandbox #{'clojure.core})]
+    (is (thrown? SecurityException (sb '(+ 1 2))))))
