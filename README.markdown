@@ -4,7 +4,7 @@ Welcome to the wonderful world of clojail! Clojail is a library for
 sandboxing Clojure code. Why is this useful? Well, for tons of
 reasons. I've personally used a sandbox for two different projects,
 such as [Try Clojure](http://try-clojure.org) and
-[sexpbot](http://github.com/Raynes/sexpbot). I've seen a wiki-like
+[sexpbot](http://github.com/flatland/sexpbot). I've seen a wiki-like
 website where the pages were Clojure code evaluated in a sandbox.
 
 One of the primary reasons for writing clojail is to replace
