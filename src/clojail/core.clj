@@ -167,11 +167,16 @@
                                           [~'obj-class#
                                            ~'obj#
                                            (.getPackage ~'obj-class#)])]
+                             
                              (throw (SecurityException. (str "You tripped the alarm! " ~'bad# " is bad!")))
                              (. ~object# ~method# ~@args#))))
-                      ~(with-bindings bindings (ensafen code)))]
-               (jvm-sandbox #(with-bindings bindings (eval code)) context))))
+                      ~(doseq [[var new-var] bindings]
+                         (alter-var-root var (constantly new-var)))
+                      ~(ensafen code))]
+               (jvm-sandbox #(eval code) context))))
          timeout :ms transform)))))
+
+(+ 4 5)
 
 (defn sandbox
   "Convenience wrapper function around sandbox* to create a sandbox function out of a tester.

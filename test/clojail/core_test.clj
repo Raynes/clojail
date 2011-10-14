@@ -1,6 +1,7 @@
 (ns clojail.core-test
   (:use [clojail core testers]
-        clojure.test))
+        clojure.test)
+  (:import java.io.StringWriter))
 
 (def sb (sandbox secure-tester))
 (def easy (sandbox #{}))
