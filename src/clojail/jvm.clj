@@ -1,8 +1,5 @@
 (ns clojail.jvm)
 
-; Java Sandbox Stuff, this is from the clojurebot code
-; http://github.com/hiredman/clojurebot/blob/master/src/hiredman/sandbox.clj
-
 (defn empty-perms-list []
   (doto (java.security.Permissions.)
     (.add (RuntimePermission. "accessDeclaredMembers"))))
