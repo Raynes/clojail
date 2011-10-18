@@ -176,8 +176,6 @@
                (jvm-sandbox #(eval code) context))))
          timeout :ms transform)))))
 
-(+ 4 5)
-
 (defn sandbox
   "Convenience wrapper function around sandbox* to create a sandbox function out of a tester.
    Takes the same arguments as sandbox* with the addition of the tester argument. Returns a
