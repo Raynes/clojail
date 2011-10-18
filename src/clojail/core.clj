@@ -131,9 +131,11 @@
             (let [writer (java.io.StringWriter.)]
               (sb '(println \"blah\") {#'*out* writer}) (str writer))
    The above example returns \"blah\\n\""
-  [& {:keys [timeout namespace context jvm? transform]
-      :or {timeout 10000 namespace (gensym "sandbox")
-           context (-> (empty-perms-list) domain context) jvm? true
+  [& {:keys [timeout namespace context jvm? transform init]
+      :or {timeout 10000
+           namespace (gensym "sandbox")
+           context (-> (empty-perms-list) domain context)
+           jvm? true
            transform eagerly-consume}}]
   (when jvm? (enable-security-manager))
   (fn [tester code & [bindings]]
@@ -147,6 +149,7 @@
            (binding [*ns* (create-ns namespace)
                      *read-eval* false]
              (refer 'clojure.core)
+             (when init (eval init))
              (let [bindings (or bindings {})
                    code
                    `(do
@@ -167,7 +170,6 @@
                                           [~'obj-class#
                                            ~'obj#
                                            (.getPackage ~'obj-class#)])]
-                             
                              (throw (SecurityException. (str "You tripped the alarm! " ~'bad# " is bad!")))
                              (. ~object# ~method# ~@args#))))
                       ~(doseq [[var new-var] bindings]

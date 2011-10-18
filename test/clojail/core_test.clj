@@ -59,3 +59,7 @@
 (deftest namespace-forbid-test
   (let [sb (sandbox #{'clojure.core})]
     (is (thrown? SecurityException (sb '(+ 1 2))))))
+
+(deftest init-test
+  (let [sb (sandbox secure-tester :init '(def foo 1))]
+    (is (= 1 (sb 'foo)))))
