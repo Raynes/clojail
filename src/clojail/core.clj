@@ -151,7 +151,7 @@
          (fn []
            (binding [*ns* (create-ns namespace)
                      *read-eval* false]
-             (refer 'clojure.core)
+             (refer-clojure)
              (let [bindings (or bindings {})
                    code
                    `(do
