@@ -174,8 +174,8 @@
                                            (.getPackage ~'obj-class#)])]
                              (throw (SecurityException. (str "You tripped the alarm! " ~'bad# " is bad!")))
                              (. ~object# ~method# ~@args#))))
+                      ~init
                       ~(ensafen code))]
-               (when init (eval init))
                (with-bindings bindings (jvm-sandbox #(eval code) context)))))
          timeout :ms transform)))))
 
