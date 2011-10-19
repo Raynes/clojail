@@ -34,7 +34,7 @@
   (is (= [0 0] (sb '(map #(.length %) ["" ""])))))
 
 (deftest binding-test
-  (is (= 2 (sb '(#'inc 2) {#'inc identity}))))
+  (is (= 2 (sb '(#'*out* 2) {#'*out* identity}))))
 
 (deftest macroexpand-test
   (is (= 'let (sb '(first '(let [x 1] x)))))

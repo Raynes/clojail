@@ -107,6 +107,9 @@
                       (.getName p)
                       "\")"))))
 
+(def ^{:private true} separate-dynamic
+  (partial (juxt filter remove) #(-> % first .isDynamic)))
+
 (defn sandbox*
   "This function creates a sandbox function that takes a tester. A tester can either be a plain set of symbols,
    in which case it'll be treated as a blacklist. Otherwise, you can provide a map of :whitelist and
@@ -149,7 +152,6 @@
            (binding [*ns* (create-ns namespace)
                      *read-eval* false]
              (refer 'clojure.core)
-             (when init (eval init))
              (let [bindings (or bindings {})
                    code
                    `(do
@@ -172,10 +174,9 @@
                                            (.getPackage ~'obj-class#)])]
                              (throw (SecurityException. (str "You tripped the alarm! " ~'bad# " is bad!")))
                              (. ~object# ~method# ~@args#))))
-                      ~(doseq [[var new-var] bindings]
-                         (alter-var-root var (constantly new-var)))
                       ~(ensafen code))]
-               (jvm-sandbox #(eval code) context))))
+               (when init (eval init))
+               (with-bindings bindings (jvm-sandbox #(eval code) context)))))
          timeout :ms transform)))))
 
 (defn sandbox
