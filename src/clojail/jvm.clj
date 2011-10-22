@@ -1,14 +1,14 @@
 (ns clojail.jvm)
 
 (defn empty-perms-list []
-  (doto (java.security.Permissions.)
-    (.add (RuntimePermission. "accessDeclaredMembers"))))
-
+  (.add (java.security.Permissions.)
+        (RuntimePermission. "accessDeclaredMembers")))
 
 (defn domain [perms]
   (java.security.ProtectionDomain.
-   (java.security.CodeSource. nil
-                              (cast java.security.cert.Certificate nil))
+   (java.security.CodeSource.
+    nil
+    (cast java.security.cert.Certificate nil))
    perms))
 
 (defn context [& dom]
