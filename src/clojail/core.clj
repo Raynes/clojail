@@ -39,19 +39,21 @@
   ([thunk time unit]
      (thunk-timeout thunk time unit identity))
   ([thunk time unit transform]
-     (let [task (FutureTask. (comp transform thunk))
-           thr (Thread. task)]
+     (let [tg (ThreadGroup. "sandbox")
+           task (FutureTask. (comp transform thunk))
+           thr (Thread. tg task)]
        (try
          (.start thr)
          (.get task time (or (uglify-time-unit unit) unit))
          (catch TimeoutException e
-           (.cancel task true)
+           (future-cancel task)
            (.stop thr) 
            (throw (TimeoutException. "Execution timed out.")))
          (catch Exception e
            (.cancel task true)
            (.stop thr) 
-           (throw e))))))
+           (throw e))
+         (finally (.stop tg))))))
 
 (defn- separate [s]
   (set
