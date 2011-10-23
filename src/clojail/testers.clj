@@ -12,5 +12,9 @@
        'load-string 'load-reader 'addMethod 'ns-resolve 'resolve 'find-var
        '*read-eval* clojure.lang.Ref clojure.lang.Reflector 'ns-publics
        'ns-unmap 'set! 'ns-map 'ns-interns 'the-ns clojure.lang.Namespace
-       'push-thread-bindings 'pop-thread-bindings
-       (p "java.lang.reflect")})
+       'push-thread-bindings 'pop-thread-bindings 'future-call 'agent 'send
+       'send-off 'pmap 'pcalls 'pvals
+       (p "java.lang.reflect")
+       (p "java.util.concurrent")
+       (p "javax.swing")
+       (p "java.awt")})
