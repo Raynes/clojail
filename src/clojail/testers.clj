@@ -7,14 +7,13 @@
   [s] (Package/getPackage s))
 
 (def ^{:doc "A somewhat secure tester. No promises."}
-     secure-tester
-     #{'alter-var-root 'intern 'def 'eval 'catch
-       'load-string 'load-reader 'addMethod 'ns-resolve 'resolve 'find-var
-       '*read-eval* clojure.lang.Ref clojure.lang.Reflector 'ns-publics
-       'ns-unmap 'set! 'ns-map 'ns-interns 'the-ns clojure.lang.Namespace
-       'push-thread-bindings 'pop-thread-bindings 'future-call 'agent 'send
-       'send-off 'pmap 'pcalls 'pvals
-       (p "java.lang.reflect")
-       (p "java.util.concurrent")
-       (p "javax.swing")
-       (p "java.awt")})
+  secure-tester
+  #{'alter-var-root 'intern 'def 'eval 'catch
+    'load-string 'load-reader 'addMethod 'ns-resolve 'resolve 'find-var
+    '*read-eval* clojure.lang.Ref clojure.lang.Reflector 'ns-publics
+    'ns-unmap 'set! 'ns-map 'ns-interns 'the-ns clojure.lang.Namespace
+    'push-thread-bindings 'pop-thread-bindings 'future-call 'agent 'send
+    'send-off 'pmap 'pcalls 'pvals
+    (p "java.lang.reflect")
+    (p "java.util.concurrent")
+    (p "java.awt")})
