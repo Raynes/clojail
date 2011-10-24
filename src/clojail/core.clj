@@ -39,9 +39,10 @@
   ([thunk time unit]
      (thunk-timeout thunk time unit identity))
   ([thunk time unit transform]
-     (let [tg (ThreadGroup. "sandbox")
-           task (FutureTask. (comp transform thunk))
-           thr (Thread. tg task)]
+     (thunk-timeout thunk time unit identity nil))
+  ([thunk time unit transform tg]
+     (let [task (FutureTask. (comp transform thunk))
+           thr (if tg (Thread. tg task) (Thread. task))]
        (try
          (.start thr)
          (.get task time (or (uglify-time-unit unit) unit))
@@ -53,7 +54,7 @@
            (.cancel task true)
            (.stop thr) 
            (throw e))
-         (finally (.stop tg))))))
+         (finally (when tg (.stop tg)))))))
 
 (defn- separate [s]
   (set
@@ -179,7 +180,7 @@
                       ~init
                       ~(ensafen code))]
                (with-bindings bindings (jvm-sandbox #(eval code) context)))))
-         timeout :ms transform)))))
+         timeout :ms transform (ThreadGroup. "sandbox"))))))
 
 (defn sandbox
   "Convenience wrapper function around sandbox* to create a sandbox function out of a tester.
