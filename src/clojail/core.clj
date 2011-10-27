@@ -110,6 +110,27 @@
                       (.getName p)
                       "\")"))))
 
+(defn make-dot [tester-str]
+  `(defmacro ~'dot [object# method# & args#]
+     `(let [~'tester-obj# (binding [*read-eval* true]
+                            (read-string ~~tester-str))
+            ~'tester-fn# (if (map? ~'tester-obj#)
+                           (let [{~'blacklist# :blacklist,
+                                  ~'whitelist# :whitelist} ~'tester-obj#]
+                             (fn [~'target#]
+                               (or (and ~'whitelist# (not (~'whitelist# ~'target#)) ~'target#)
+                                   (and ~'blacklist# (~'blacklist# ~'target#)))))
+                           ~'tester-obj#)
+            ~'obj# ~object#
+            ~'obj-class# (class ~'obj#)]
+        (if-let [~'bad#
+                 (some ~'tester-fn#
+                       [~'obj-class#
+                        ~'obj#
+                        (.getPackage ~'obj-class#)])]
+          (throw (SecurityException. (str "You tripped the alarm! " ~'bad# " is bad!")))
+          (. ~object# ~method# ~@args#)))))
+
 (def ^{:private true} separate-dynamic
   (partial (juxt filter remove) #(-> % first .isDynamic)))
 
@@ -156,29 +177,7 @@
                      *read-eval* false]
              (refer-clojure)
              (let [bindings (or bindings {})
-                   code
-                   `(do
-                      (defmacro ~'dot [object# method# & args#]
-                        `(let [~'tester-obj# (binding [*read-eval* true]
-                                               (read-string ~~tester-str))
-                               ~'tester-fn# (if (map? ~'tester-obj#)
-                                              (let [{~'blacklist# :blacklist,
-                                                     ~'whitelist# :whitelist} ~'tester-obj#]
-                                                (fn [~'target#]
-                                                  (or (and ~'whitelist# (not (~'whitelist# ~'target#)) ~'target#)
-                                                      (and ~'blacklist# (~'blacklist# ~'target#)))))
-                                              ~'tester-obj#)
-                               ~'obj# ~object#
-                               ~'obj-class# (class ~'obj#)]
-                           (if-let [~'bad#
-                                    (some ~'tester-fn#
-                                          [~'obj-class#
-                                           ~'obj#
-                                           (.getPackage ~'obj-class#)])]
-                             (throw (SecurityException. (str "You tripped the alarm! " ~'bad# " is bad!")))
-                             (. ~object# ~method# ~@args#))))
-                      ~init
-                      ~(ensafen code))]
+                   code (list* 'do (make-dot tester-str) `(~init ~(ensafen code)))]
                (with-bindings bindings (jvm-sandbox #(eval code) context)))))
          timeout :ms transform (ThreadGroup. "sandbox"))))))
 
