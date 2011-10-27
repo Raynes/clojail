@@ -63,3 +63,9 @@
 (deftest init-test
   (let [sb (sandbox secure-tester :init '(def foo 1))]
     (is (= 1 (sb 'foo)))))
+
+(deftest ns-init-test
+  (let [ns-sb (sandbox secure-tester :ns-init `((refer-clojure) (use 'clojure.set)))]
+    (is (thrown-with-msg? java.util.concurrent.ExecutionException #"Unable to resolve symbol"
+          (sb 'rename-keys)))
+    (is (= clojure.set/rename-keys (ns-sb 'rename-keys)))))

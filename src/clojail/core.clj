@@ -158,12 +158,13 @@
             (let [writer (java.io.StringWriter.)]
               (sb '(println \"blah\") {#'*out* writer}) (str writer))
    The above example returns \"blah\\n\""
-  [& {:keys [timeout namespace context jvm? transform init]
+  [& {:keys [timeout namespace context jvm? transform init ns-init]
       :or {timeout 10000
            namespace (gensym "sandbox")
            context (-> (empty-perms-list) domain context)
            jvm? true
-           transform eagerly-consume}}]
+           transform eagerly-consume
+           ns-init [`(refer-clojure)]}}]
   (when jvm? (enable-security-manager))
   (fn [tester code & [bindings]]
     (let [tester-str (with-out-str
@@ -175,9 +176,11 @@
          (fn []
            (binding [*ns* (create-ns namespace)
                      *read-eval* false]
-             (refer-clojure)
              (let [bindings (or bindings {})
-                   code (list* 'do (make-dot tester-str) `(~init ~(ensafen code)))]
+                   code `(do ~@ns-init
+                             ~(make-dot tester-str)
+                             ~init
+                             ~(ensafen code))]
                (with-bindings bindings (jvm-sandbox #(eval code) context)))))
          timeout :ms transform (ThreadGroup. "sandbox"))))))
 
