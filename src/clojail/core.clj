@@ -110,7 +110,7 @@
                       (.getName p)
                       "\")"))))
 
-(defn make-dot [tester-str]
+(defn- make-dot [tester-str]
   `(defmacro ~'dot [object# method# & args#]
      `(let [~'tester-obj# (binding [*read-eval* true]
                             (read-string ~~tester-str))
