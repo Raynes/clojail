@@ -1,7 +1,8 @@
 (ns clojail.core-test
   (:use [clojail core testers]
         clojure.test)
-  (:import java.io.StringWriter))
+  (:import java.io.StringWriter
+           java.util.concurrent.ExecutionException))
 
 (def sb (sandbox secure-tester))
 (def easy (sandbox #{}))
@@ -66,6 +67,5 @@
 
 (deftest ns-init-test
   (let [ns-sb (sandbox secure-tester :ns-init `((refer-clojure) (use 'clojure.set)))]
-    (is (thrown-with-msg? java.util.concurrent.ExecutionException #"Unable to resolve symbol"
-          (sb 'rename-keys)))
+    (is (thrown-with-msg? ExecutionException #"Unable to resolve symbol" (sb 'rename-keys)))
     (is (= clojure.set/rename-keys (ns-sb 'rename-keys)))))
