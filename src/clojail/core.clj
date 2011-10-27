@@ -6,10 +6,6 @@
   (:import (java.util.concurrent TimeoutException TimeUnit FutureTask)
            (clojure.lang LispReader$ReaderException)))
 
-(defn enable-security-manager
-  "Enable the JVM security manager. The sandbox can do this for you."
-  [] (System/setSecurityManager (SecurityManager.)))
-
 (def uglify-time-unit
   (into {} (for [[enum aliases] {TimeUnit/NANOSECONDS [:ns :nanoseconds]
                                  TimeUnit/MICROSECONDS [:us :microseconds]
@@ -134,25 +130,43 @@
 (def ^{:private true} separate-dynamic
   (partial (juxt filter remove) #(-> % first .isDynamic)))
 
+(defn- set-security-manager [s] (System/setSecurityManager s))
+
 (defn sandbox*
-  "This function creates a sandbox function that takes a tester. A tester can either be a plain set of symbols,
-   in which case it'll be treated as a blacklist. Otherwise, you can provide a map of :whitelist and
-   :blacklist bound to sets. In this case, the whitelist and blacklist will both be used. If you only
-   want a whitelist, just supply :whitelist in the map.
+  "This function creates a sandbox function that takes a tester. A tester can either be
+   a plain set of symbols, in which case it'll be treated as a blacklist. Otherwise, you
+   can provide a map of :whitelist and :blacklist bound to sets. In this case, the whitelist
+   and blacklist will both be used. If you only want a whitelist, just supply :whitelist in
+   the map.
 
    Optional arguments are as follows:
-   :timeout, default is 10000 MS or 10 seconds. If the expression evaluated in the sandbox takes
-   longer than the timeout, an error will be thrown and the thread running the code will be stopped.
-   :namespace, the namespace of the sandbox. The default is (gensym \"sandbox\").
-   :context, the context for the JVM sandbox to run in. Only relevant if :jvm? is true. It has a sane
-   default, so you shouldn't need to worry about this.
-   :jvm?, if set to true, the JVM sandbox will be employed. It defaults to true.
-   :transform a function to call on the result returned from the sandboxed code, before returning it,
-   while still within the timeout context.
 
-   This function will return a new function that you should bind to something. You can call this
-   function with code and it will be evaluated in the sandbox. The function also takes an optional
-   second parameter which is a hashmap of vars to values that will be passed to push-thread-bindings.
+   :timeout, default is 10000 MS or 10 seconds. If the expression evaluated in the sandbox
+   takes longer than the timeout, an error will be thrown and the thread running the code
+   will be stopped.
+
+   :namespace, the namespace of the sandbox. The default is (gensym \"sandbox\").
+   :context, the context for the JVM sandbox to run in. Only relevant if :jvm? is true. It
+   has a sane default, so you shouldn't need to worry about this.
+
+   :jvm?, if set to true, the JVM sandbox will be employed. It defaults to true.
+
+   :transform, a function to call on the result returned from the sandboxed code, before
+   returning it, while still within the timeout context.
+
+   :init, some (quoted) code to run in the sandbox's namespace, but outside of the sandbox.
+
+   :ns-init, a sequence of calls to things like refer-clojure, require, use, etc. It should
+   look like this: :ns-init `((refer-clojure) (require foo) ...). If this key isn't passed,
+   the ns is set up by calling refer-clojure. If you pass this key, you should always pass
+   refer-clojure first.
+
+   This function will return a new function that you should bind to something. You can call
+   this function with code and it will be evaluated in the sandbox. The function also takes
+   an optional second parameter which is a hashmap of vars to values that will be passed to
+   with-bindings. Since Clojure 1.3, only vars explicitly declared as dynamic are able to be
+   rebound. As a result, only those vars will work here. If this doesn't work for you,
+   read about the :init key.
 
    Example: (def sb (sandbox #{'alter-var-root 'java.lang.Thread} :timeout 5000))
             (let [writer (java.io.StringWriter.)]
@@ -165,11 +179,9 @@
            jvm? true
            transform eagerly-consume
            ns-init [`(refer-clojure)]}}]
-  (when jvm? (enable-security-manager))
+  (when jvm? (set-security-manager (SecurityManager.)))
   (fn [tester code & [bindings]]
-    (let [tester-str (with-out-str
-                        (binding [*print-dup* true]
-                          (pr tester)))]
+    (let [tester-str (with-out-str (binding [*print-dup* true] (pr tester)))]
       (if-let [problem (check-form code tester)]
         (throw (SecurityException. (str "You tripped the alarm! " problem " is bad!")))
         (thunk-timeout
