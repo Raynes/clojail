@@ -69,3 +69,10 @@
   (let [ns-sb (sandbox secure-tester :ns-init `((refer-clojure) (use 'clojure.set)))]
     (is (thrown-with-msg? ExecutionException #"Unable to resolve symbol" (sb 'rename-keys)))
     (is (= clojure.set/rename-keys (ns-sb 'rename-keys)))))
+
+(deftest def-test
+  (let [sb (sandbox secure-tester-without-def :init '(def foo 1))]
+    (doseq [form (map #(list 'def % 0) '[q w e r t y])]
+      (sb form))
+    (is (thrown-with-msg? ExecutionException #"Unable to resolve symbol" (sb 't)))
+    (is (= 0 (sb 'y)))))
