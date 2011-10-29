@@ -219,7 +219,7 @@
    The above example returns \"blah\\n\""
   [& {:keys [timeout namespace context jvm? transform init ns-init max-defs]
       :or {timeout 10000
-           namespace (symbol (gensym "sandbox"))
+           namespace (gensym "sandbox")
            context (-> (empty-perms-list) domain context)
            jvm? true
            transform eagerly-consume
