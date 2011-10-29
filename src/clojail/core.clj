@@ -1,18 +1,12 @@
+;; Clojail is an easy way to sandbox your code. Whether you want to allow evaluation on a website,
+;; in an IRC bot, or anything else you can think of, Clojail wants to be the easiest and most
+;; comprehensive way to do that. But it isn't easy.
 (ns clojail.core
   (:use clojure.stacktrace
         [clojure.walk :only [walk postwalk-replace]]
         clojail.jvm)
-  (:require [clojail.testers :as tester]) ;; only for debug, really
   (:import (java.util.concurrent TimeoutException TimeUnit FutureTask)
            (clojure.lang LispReader$ReaderException)))
-
-(def uglify-time-unit
-  (into {} (for [[enum aliases] {TimeUnit/NANOSECONDS [:ns :nanoseconds]
-                                 TimeUnit/MICROSECONDS [:us :microseconds]
-                                 TimeUnit/MILLISECONDS [:ms :milliseconds]
-                                 TimeUnit/SECONDS [:s :sec :seconds]}
-                 alias aliases]
-             {alias enum})))
 
 ;; postwalk is like a magical recursive doall, to force lazy-seqs
 ;; within the timeout context; but since it doesn't maintain perfect
@@ -27,11 +21,27 @@
     (catch Throwable _))
   val)
 
+;; It sucks to have to deal with TimeUnits. They're so damned long.
+(def uglify-time-unit "Create a map of pretty keywords to ugly TimeUnits"
+  (into {} (for [[enum aliases] {TimeUnit/NANOSECONDS [:ns :nanoseconds]
+                                 TimeUnit/MICROSECONDS [:us :microseconds]
+                                 TimeUnit/MILLISECONDS [:ms :milliseconds]
+                                 TimeUnit/SECONDS [:s :sec :seconds]}
+                 alias aliases]
+             {alias enum})))
+
+;; This function uses some deprecated Java methods to stop threads, but the
+;; reason they're deprecated doesn't really apply here. Just because people
+;; don't use them properly doesn't mean they aren't useful.
+;;
+;; This function is useful in general, and that's why it is public.
 (defn thunk-timeout
-  "Takes a function and an amount of time in ms to wait for the function to finish
-  executing. The sandbox can do this for you."
+  "Takes a function and an amount of time to wait for the function to finish
+   executing. The sandbox can do this for you. unit is any of :ns, :us, :ms,
+   or :s which correspond to TimeUnit/NANOSECONDS, MICROSECONDS, MILLISECONDS,
+   and SECONDS respectively."
   ([thunk ms]
-     (thunk-timeout thunk ms :ms))
+     (thunk-timeout thunk ms :ms)) ; Default to milliseconds, because that's pretty common.
   ([thunk time unit]
      (thunk-timeout thunk time unit identity))
   ([thunk time unit transform]
@@ -43,7 +53,7 @@
          (.start thr)
          (.get task time (or (uglify-time-unit unit) unit))
          (catch TimeoutException e
-           (future-cancel task)
+           (future-cancel task) ; Holy shit, we get to use a Clojure function!
            (.stop thr) 
            (throw (TimeoutException. "Execution timed out.")))
          (catch Exception e
@@ -52,7 +62,10 @@
            (throw e))
          (finally (when tg (.stop tg)))))))
 
-(defn- separate [s]
+(defn- separate
+  "Take a collection and break it and its contents apart until we have
+   a set of things to check for badness against."
+  [s]
   (set
    (flatten
     (map #(if (symbol? %)
@@ -65,9 +78,13 @@
             %)
          (flatten s)))))
 
-(defn- collify [form] (if (coll? form) form [form]))
+(defn- collify
+  "If form isn't a collection, wrap it in a vector."
+  [form] (if (coll? form) form [form]))
 
-(defn macroexpand-most [form]
+(defn- macroexpand-most
+  "Macroexpand most, but not all. Leave non-collections and quoted things alone."
+  [form]
   (if (or
        (not (coll? form)) 
        (and (seq? form) 
@@ -75,7 +92,12 @@
     form
     (walk macroexpand-most identity (macroexpand form))))
 
-(defn dotify [form]
+;; Because the dot (.) interop form is a special form, we can't just rebind it or anything.
+;; Instead, we need to replace it entirely with a safe macro of our own. To do this, we need
+;; to replace all . symbols with 'dot', the name of our own safe dot macro.
+(defn- dotify
+  "Replace all . symbols with 'dot."
+  [form]
   (if-not (coll? form)
     form
     (let [recurse #(walk dotify identity %)]
@@ -87,9 +109,16 @@
                 . (cons 'dot (recurse (rest form)))
                 (recurse form)))))))
 
-(def ensafen (comp dotify macroexpand-most))
-(def ^{:private true} mutilate (comp separate collify macroexpand-most))
+;; Compose our earlier functions.
+(def ^{:private true} ensafen "Fix code to make interop safe."
+  (comp dotify macroexpand-most))
 
+(def ^{:private true} mutilate
+  "Macroexpand and separate pieces to create a set of symbols and such
+   that is easy to check for badness."
+  (comp separate collify macroexpand-most))
+
+;; The clojail equivalent of motion detectors.
 (defn check-form
   "Check a form to see if it trips a tester."
   [form tester]
@@ -100,13 +129,19 @@
         (or (some #(and (symbol? %) whitelist (not (whitelist %)) %) mutilated)
             (and blacklist (some blacklist mutilated)))))))
 
+;; We have to run the sandbox against packages as well as classes,
+;; but macros can't embed Package objects in code by default. This
+;; is a simple print-dup method so that we can embed them in our dot
+;; macro.
 (defmethod print-dup java.lang.Package
   ([p out]
      (.write out (str "#=(java.lang.Package/getPackage \""
                       (.getName p)
                       "\")"))))
 
-(defn- make-dot [tester-str]
+(defn- make-dot
+  "Returns a safe . macro."
+  [tester-str]
   `(defmacro ~'dot [object# method# & args#]
      `(let [~'tester-obj# (binding [*read-eval* true]
                             (read-string ~~tester-str))
@@ -127,14 +162,15 @@
           (throw (SecurityException. (str "You tripped the alarm! " ~'bad# " is bad!")))
           (. ~object# ~method# ~@args#)))))
 
-(def ^{:private true} separate-dynamic
-  (partial (juxt filter remove) #(-> % first .isDynamic)))
-
 (defn- set-security-manager [s] (System/setSecurityManager s))
 
-(defn- user-defs [nspace] (set (keys (ns-interns nspace))))
+(defn- user-defs
+  "Find get a set of all the symbols of vars defined in a namespace."
+  [nspace] (set (keys (ns-interns nspace))))
 
-(defn- wipe-defs [init-defs old-defs max-defs nspace]
+(defn- wipe-defs
+  "Unmap vals in the sandbox only if the count of them is max-defs."
+  [init-defs old-defs max-defs nspace]
   (let [defs (remove init-defs (user-defs nspace))]
     (when (> (count defs) max-defs)
       (doseq [n (remove init-defs old-defs)]
@@ -220,9 +256,6 @@
   [tester & args]
   (let [sb (apply sandbox* args)]
     (partial sb tester)))
-
-;; install a default sandbox for testing
-(def ^{:private true} sb (sandbox tester/secure-tester))
 
 (defn safe-read
   "Read a string from an untrusted source. Mainly just disables read-eval,
