@@ -76,3 +76,7 @@
       (sb form))
     (is (thrown-with-msg? ExecutionException #"Unable to resolve symbol" (sb 't)))
     (is (= 0 (sb 'y)))))
+
+(deftest require-test
+  (let [sb (sandbox secure-tester)]
+    (is (nil? (sb '(require 'clojure.string))))))

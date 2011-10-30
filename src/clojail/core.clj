@@ -62,6 +62,12 @@
            (throw e))
          (finally (when tg (.stop tg)))))))
 
+(defn safe-resolve
+  "Resolves namespaces safely."
+  [s]
+  (try (resolve s)
+       (catch RuntimeException _ s)))
+
 (defn- separate
   "Take a collection and break it and its contents apart until we have
    a set of things to check for badness against."
@@ -69,12 +75,11 @@
   (set
    (flatten
     (map #(if (symbol? %)
-            (let [resolved-s (resolve %)]
-              (if-let [s-meta (meta resolved-s)]
-                ((juxt (comp symbol str :ns) :name) s-meta)
-                (if (= Class (class resolved-s))
-                  resolved-s
-                  (-> % str (.split "/") (->> (map symbol))))))
+            (let [resolved-s (safe-resolve %)
+                  s-meta (meta resolved-s)]
+              (cond s-meta ((juxt (comp symbol str :ns) :name) s-meta)
+                    (var? resolved-s) (-> % str (.split "/") (->> (map symbol)))
+                    :else resolved-s))
             %)
          (flatten s)))))
 
