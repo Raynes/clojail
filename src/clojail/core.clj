@@ -175,14 +175,22 @@
   "Find get a set of all the symbols of vars defined in a namespace."
   [nspace] (set (keys (ns-interns nspace))))
 
+(defn bulk-unmap
+  "Unmap a bunch of vars."
+  [nspace vars]
+  (doseq [n vars]
+    (binding [*ns* nspace]
+      (eval `(ns-unmap *ns* '~n)))))
+
 (defn- wipe-defs
-  "Unmap vals in the sandbox only if the count of them is max-defs."
+  "Unmap vals in the sandbox only if the count of them is higher than max-defs."
   [init-defs old-defs max-defs nspace]
-  (let [defs (remove init-defs (user-defs nspace))]
+  (let [defs (remove init-defs (user-defs nspace))
+        new-defs (remove old-defs defs)]
     (when (> (count defs) max-defs)
-      (doseq [n (remove init-defs old-defs)]
-        (binding [*ns* nspace]
-          (eval `(ns-unmap *ns* '~n)))))))
+      (bulk-unmap nspace (remove init-defs old-defs)))
+    (when (> (count new-defs) max-defs)
+      (bulk-unmap nspace new-defs))))
 
 (defn sandbox*
   "This function creates a sandbox function that takes a tester. A tester can either be

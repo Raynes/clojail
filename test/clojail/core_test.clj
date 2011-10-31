@@ -71,11 +71,17 @@
     (is (= clojure.set/rename-keys (ns-sb 'rename-keys)))))
 
 (deftest def-test
-  (let [sb (sandbox secure-tester-without-def :init '(def foo 1))]
-    (doseq [form (map #(list 'def % 0) '[q w e r t y])]
-      (sb form))
-    (is (thrown-with-msg? ExecutionException #"Unable to resolve symbol" (sb 't)))
-    (is (= 0 (sb 'y)))))
+  (let [sb-one (sandbox secure-tester-without-def)
+        sb-two (sandbox secure-tester-without-def)]
+    (testing "Leaves new defs if they're less than max def."
+      (doseq [form (map #(list 'def % 0) '[q w e r t y u i])]
+        (sb-one form))
+      (is (thrown-with-msg? ExecutionException #"Unable to resolve symbol" (sb 't)))
+      (is (= 0 (sb-one 'i))))
+    (testing "Destroys old *and* new defs if new defs is also over max-def."
+      (doseq [form (map #(list 'def % 0) '[q w e r t y u i o p])]
+        (sb-two form))
+      (is (thrown-with-msg? ExecutionException #"Unable to resolve symbol" (sb 'p))))))
 
 (deftest require-test
   (let [sb (sandbox secure-tester)]
