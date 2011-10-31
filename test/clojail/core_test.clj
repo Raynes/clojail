@@ -84,3 +84,7 @@
 (deftest security-off-test
   (let [sb (sandbox secure-tester :jvm false)]
     (is (= "foo\n" (sb '(slurp "test/test.txt"))))))
+
+(deftest block-fields-test
+  (let [sb (sandbox (into secure-tester #{'System/out}))]
+    (is (thrown-with-msg? SecurityException #"is bad!" (sb '(. System/out println "foo"))))))
