@@ -1,11 +1,14 @@
 (ns clojail.jvm)
 
-(defn empty-perms-list
-  "Create an empty list of permissions. All it permisses is the ability to
-   access declared members."
-  []
-  (doto (java.security.Permissions.)
-    (.add (RuntimePermission. "accessDeclaredMembers"))))
+(defn permissions
+  "Create a new Permissions object with all of the permissions passed.
+   If :none is passed, then no permissions at all are given. If nothing
+   at all is passed, accessDeclaredMembers is added by default."
+  [& permissions]
+  (let [perms (java.security.Permissions.)]
+    (when-not (= (first permissions) :none))
+    (doseq [perm (or permissions [(RuntimePermission. "accessDeclaredMembers")])]
+      (.add perms perm))))
 
 (defn domain
   "Create a protection domain out of permissions."

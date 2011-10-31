@@ -235,7 +235,7 @@
   [& {:keys [timeout namespace context jvm transform init ns-init max-defs]
       :or {timeout 10000
            namespace (gensym "sandbox")
-           context (-> (empty-perms-list) domain context)
+           context (-> (permissions) domain context)
            jvm true
            transform eagerly-consume
            ns-init [`(refer-clojure)]
