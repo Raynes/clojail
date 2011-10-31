@@ -76,12 +76,11 @@
     (testing "Leaves new defs if they're less than max def."
       (doseq [form (map #(list 'def % 0) '[q w e r t y u i])]
         (sb-one form))
-      (is (thrown-with-msg? ExecutionException #"Unable to resolve symbol" (sb 't)))
+      (is (thrown-with-msg? ExecutionException #"Unable to resolve symbol" (sb-one 't)))
       (is (= 0 (sb-one 'i))))
     (testing "Destroys old *and* new defs if new defs is also over max-def."
-      (doseq [form (map #(list 'def % 0) '[q w e r t y u i o p])]
-        (sb-two form))
-      (is (thrown-with-msg? ExecutionException #"Unable to resolve symbol" (sb 'p))))))
+      (sb-two (cons 'do (map #(list 'def % 0) '[a b c d e f])))
+      (is (thrown-with-msg? ExecutionException #"Unable to resolve symbol" (sb 'f))))))
 
 (deftest require-test
   (let [sb (sandbox secure-tester)]
