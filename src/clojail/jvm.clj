@@ -2,21 +2,21 @@
 
 (defn permissions
   "Create a new Permissions object with all of the permissions passed.
-   If :none is passed, then no permissions at all are given. If nothing
-   at all is passed, accessDeclaredMembers is added by default."
+   accessDeclaredMembers is added by default."
   [& permissions]
   (let [perms (java.security.Permissions.)]
     (when-not (= (first permissions) :none))
-    (doseq [perm (or permissions [(RuntimePermission. "accessDeclaredMembers")])]
+    (doseq [perm (conj permissions (RuntimePermission. "accessDeclaredMembers"))]
       (.add perms perm))))
 
 (defn domain
   "Create a protection domain out of permissions."
-  [perms]
+  [perms & [code-source]]
   (java.security.ProtectionDomain.
-   (java.security.CodeSource.
-    nil
-    (cast java.security.cert.Certificate nil))
+   (or code-source
+       (java.security.CodeSource.
+        nil
+        (cast java.security.cert.Certificate nil)))
    perms))
 
 (defn context
