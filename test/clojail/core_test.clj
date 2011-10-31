@@ -86,5 +86,6 @@
     (is (= "foo\n" (sb '(slurp "test/test.txt"))))))
 
 (deftest block-fields-test
-  (let [sb (sandbox (into secure-tester #{'System/out}))]
-    (is (thrown-with-msg? SecurityException #"is bad!" (sb '(. System/out println "foo"))))))
+  (let [sb (sandbox secure-tester)]
+    (doseq [field '[System/out System/in System/in]]
+      (is (thrown-with-msg? SecurityException #"is bad!" (sb `(. ~field println "foo")))))))
