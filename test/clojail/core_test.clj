@@ -1,5 +1,5 @@
 (ns clojail.core-test
-  (:use [clojail core testers]
+  (:use [clojail core testers jvm]
         clojure.test)
   (:import java.io.StringWriter
            java.util.concurrent.ExecutionException))
@@ -94,3 +94,13 @@
   (let [sb (sandbox secure-tester)]
     (doseq [field '[System/out System/in System/in]]
       (is (thrown-with-msg? SecurityException #"is bad!" (sb `(. ~field println "foo")))))))
+
+(deftest custom-context-test
+  (let [sb (sandbox secure-tester :context (-> (java.io.FilePermission. "foo" "read,write,delete")
+                                               permissions
+                                               domain
+                                               context))]
+    (is (nil? (sb '(spit "foo" "Hi!"))))
+    (is (= "Hi!" (sb '(slurp "foo"))))
+    (is (true? (sb '(.delete (java.io.File. "foo")))))
+    (is (thrown-with-msg? ExecutionException #"access denied" (sb '(spit "foo2" "evil"))))))

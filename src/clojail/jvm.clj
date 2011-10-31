@@ -5,9 +5,9 @@
    accessDeclaredMembers is added by default."
   [& permissions]
   (let [perms (java.security.Permissions.)]
-    (when-not (= (first permissions) :none))
     (doseq [perm (conj permissions (RuntimePermission. "accessDeclaredMembers"))]
-      (.add perms perm))))
+      (.add perms perm))
+    perms))
 
 (defn domain
   "Create a protection domain out of permissions."
