@@ -65,7 +65,9 @@
 (defn safe-resolve
   "Resolves namespaces safely."
   [s]
-  (try (resolve s)
+  (try (if-let [resolved (resolve s)]
+         resolved
+         s)
        (catch RuntimeException _ s)))
 
 (defn- separate
@@ -222,15 +224,14 @@
             (let [writer (java.io.StringWriter.)]
               (sb '(println \"blah\") {#'*out* writer}) (str writer))
    The above example returns \"blah\\n\""
-  [& {:keys [timeout namespace context jvm? transform init ns-init max-defs]
+  [& {:keys [timeout namespace context jvm transform init ns-init max-defs]
       :or {timeout 10000
            namespace (gensym "sandbox")
            context (-> (empty-perms-list) domain context)
-           jvm? true
+           jvm true
            transform eagerly-consume
            ns-init [`(refer-clojure)]
            max-defs 5}}]
-  (when jvm? (set-security-manager (SecurityManager.)))
   (let [nspace (create-ns namespace)]
     (binding [*ns* nspace]
       (eval `(do ~@ns-init
@@ -238,20 +239,24 @@
     (let [init-defs (conj (user-defs nspace) 'dot)]
       (fn [tester code & [bindings]]
         (let [tester-str (with-out-str (binding [*print-dup* true] (pr tester)))
-              old-defs (user-defs nspace)]
+              old-defs (user-defs nspace)
+              old-security-manager (System/getSecurityManager)]
+          (when jvm (set-security-manager (SecurityManager.)))
           (try
-            (if-let [problem (check-form code tester)]
-              (throw (SecurityException. (str "You tripped the alarm! " problem " is bad!")))
-              (thunk-timeout
-               (fn []
-                 (binding [*ns* nspace
-                           *read-eval* false]
-                   (let [bindings (or bindings {})
-                         code `(do ~(make-dot tester-str)
-                                   ~(ensafen code))]
-                     (with-bindings bindings (jvm-sandbox #(eval code) context)))))
-               timeout :ms transform (ThreadGroup. "sandbox")))
-            (finally (wipe-defs init-defs old-defs max-defs nspace))))))))
+            (let [result (if-let [problem (check-form code tester)]
+                           (throw (SecurityException. (str "You tripped the alarm! " problem " is bad!")))
+                           (thunk-timeout
+                            (fn []
+                              (binding [*ns* nspace
+                                        *read-eval* false]
+                                (let [bindings (or bindings {})
+                                      code `(do ~(make-dot tester-str)
+                                                ~(ensafen code))]
+                                  (with-bindings bindings (jvm-sandbox #(eval code) context)))))
+                            timeout :ms transform (ThreadGroup. "sandbox")))]
+              result)
+            (finally (set-security-manager old-security-manager)
+                     (wipe-defs init-defs old-defs max-defs nspace))))))))
 
 (defn sandbox
   "Convenience wrapper function around sandbox* to create a sandbox function out of a tester.

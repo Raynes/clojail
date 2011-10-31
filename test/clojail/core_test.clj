@@ -80,3 +80,7 @@
 (deftest require-test
   (let [sb (sandbox secure-tester)]
     (is (nil? (sb '(require 'clojure.string))))))
+
+(deftest security-off-test
+  (let [sb (sandbox secure-tester :jvm false)]
+    (is (= "foo\n" (sb '(slurp "test/test.txt"))))))
