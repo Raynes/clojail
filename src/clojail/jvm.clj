@@ -4,8 +4,8 @@
   "Create an empty list of permissions. All it permisses is the ability to
    access declared members."
   []
-  (.add (java.security.Permissions.)
-        (RuntimePermission. "accessDeclaredMembers")))
+  (doto (java.security.Permissions.)
+    (.add (RuntimePermission. "accessDeclaredMembers"))))
 
 (defn domain
   "Create a protection domain out of permissions."
