@@ -63,9 +63,9 @@
          (finally (when tg (.stop tg)))))))
 
 (defn safe-resolve
-  "Resolves namespaces safely."
-  [s]
-  (try (if-let [resolved (resolve s)]
+  "Resolves things safely."
+  [s nspace]
+  (try (if-let [resolved (ns-resolve nspace s)]
          resolved
          s)
        (catch RuntimeException _ s)))
@@ -73,15 +73,19 @@
 (defn- separate
   "Take a collection and break it and its contents apart until we have
    a set of things to check for badness against."
-  [s]
+  [s nspace]
   (set
    (flatten
     (map #(if (symbol? %)
-            (let [resolved-s (safe-resolve %)
+            (let [resolved-s (safe-resolve % nspace)
                   s-meta (meta resolved-s)]
-              (cond s-meta ((juxt (comp symbol str :ns) :name) s-meta)
-                    (var? resolved-s) (-> % str (.split "/") (->> (map symbol)))
-                    :else resolved-s))
+              (if s-meta
+                [resolved-s ((juxt (comp symbol str :ns) :ns :name) s-meta)]
+                (let [[bottom] (map symbol (.split (str %) "/"))
+                      resolved-s (safe-resolve bottom nspace)]
+                  (if (class? resolved-s)
+                    [resolved-s %]
+                    %))))
             %)
          (flatten s)))))
 
@@ -120,21 +124,17 @@
 (def ^{:private true} ensafen "Fix code to make interop safe."
   (comp dotify macroexpand-most))
 
-(def ^{:private true} mutilate
+(defn- mutilate
   "Macroexpand and separate pieces to create a set of symbols and such
    that is easy to check for badness."
-  (comp separate collify macroexpand-most))
+  [form nspace]
+  (separate (collify (macroexpand-most form)) nspace))
 
 ;; The clojail equivalent of motion detectors.
 (defn check-form
   "Check a form to see if it trips a tester."
-  [form tester]
-  (let [mutilated (mutilate form)]
-    (if (set? tester)
-      (some tester mutilated)
-      (let [{:keys [whitelist blacklist]} tester]
-        (or (some #(and (symbol? %) whitelist (not (whitelist %)) %) mutilated)
-            (and blacklist (some blacklist mutilated)))))))
+  [form tester nspace]
+  (some tester (mutilate form nspace)))
 
 ;; We have to run the sandbox against packages as well as classes,
 ;; but macros can't embed Package objects in code by default. This
@@ -152,20 +152,9 @@
   `(defmacro ~'dot [object# method# & args#]
      `(let [~'tester-obj# (binding [*read-eval* true]
                             (read-string ~~tester-str))
-            ~'tester-fn# (if (map? ~'tester-obj#)
-                           (let [{~'blacklist# :blacklist,
-                                  ~'whitelist# :whitelist} ~'tester-obj#]
-                             (fn [~'target#]
-                               (or (and ~'whitelist# (not (~'whitelist# ~'target#)) ~'target#)
-                                   (and ~'blacklist# (~'blacklist# ~'target#)))))
-                           ~'tester-obj#)
             ~'obj# ~object#
             ~'obj-class# (class ~'obj#)]
-        (if-let [~'bad#
-                 (some ~'tester-fn#
-                       [~'obj-class#
-                        ~'obj#
-                        (.getPackage ~'obj-class#)])]
+        (if-let [~'bad# (some ~'tester-obj# [~'obj-class# ~'obj# (.getPackage ~'obj-class#)])]
           (throw (SecurityException. (str "You tripped the alarm! " ~'bad# " is bad!")))
           (. ~object# ~method# ~@args#)))))
 
@@ -193,11 +182,8 @@
       (bulk-unmap nspace new-defs))))
 
 (defn sandbox*
-  "This function creates a sandbox function that takes a tester. A tester can either be
-   a plain set of symbols, in which case it'll be treated as a blacklist. Otherwise, you
-   can provide a map of :whitelist and :blacklist bound to sets. In this case, the whitelist
-   and blacklist will both be used. If you only want a whitelist, just supply :whitelist in
-   the map.
+  "This function creates a sandbox function that takes a tester. A tester is a set of objects
+   that you don't want to be allowed in code. It is a blacklist.
 
    Optional arguments are as follows:
 
@@ -231,7 +217,8 @@
             (let [writer (java.io.StringWriter.)]
               (sb '(println \"blah\") {#'*out* writer}) (str writer))
    The above example returns \"blah\\n\""
-  [& {:keys [timeout namespace context jvm transform init ns-init max-defs refer-clojure]
+  [& {:keys [timeout namespace context jvm transform
+             init ns-init max-defs refer-clojure]
       :or {timeout 10000
            namespace (gensym "sandbox")
            context (-> (permissions) domain context)
@@ -250,7 +237,7 @@
               old-security-manager (System/getSecurityManager)]
           (when jvm (set-security-manager (SecurityManager.)))
           (try
-            (let [result (if-let [problem (check-form code tester)]
+            (let [result (if-let [problem (check-form code tester nspace)] 
                            (throw (SecurityException. (str "You tripped the alarm! " problem " is bad!")))
                            (thunk-timeout
                             (fn []

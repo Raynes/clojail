@@ -7,9 +7,6 @@
 (def sb (sandbox secure-tester))
 (def easy (sandbox #{}))
 
-(def wbsb (sandbox {:whitelist #{java.io.File java.lang.Math 'new 'clojure.core '+ '-}
-                    :blacklist #{'+ java.lang.Math}}))
-
 (deftest dot-test
   (is (= 4 (easy '(. "dots" (length))))))
 
@@ -24,12 +21,6 @@
 
 (deftest sandbox-config-test
   (is (string? (easy '(-> java.io.File .getMethods (aget 0) .getName)))))
-
-(deftest whitelist-test
-  (is (= 6 (wbsb '(- 12 6))))
-  (is (thrown? Exception (wbsb '(+ 3 3))))
-  (is (= (java.io.File. "") (wbsb '(java.io.File. ""))))
-  (is (thrown? Exception (wbsb '(java.lang.Math/abs 10)))))
 
 (deftest lazy-dot-test
   (is (= [0 0] (sb '(map #(.length %) ["" ""])))))
@@ -108,3 +99,9 @@
     (is (= "Hi!" (sb '(slurp "foo"))))
     (is (true? (sb '(.delete (java.io.File. "foo")))))
     (is (thrown-with-msg? ExecutionException #"access denied" (sb '(spit "foo2" "evil"))))))
+
+(deftest block-specific-test
+  (let [sb (sandbox #{#'clojure.core/+} :init '(def + 3))]
+    (is (thrown-with-msg? SecurityException #"You tripped the alarm!"
+          (sb '(clojure.core/+ 3 3))))
+    (is (= 3 (sb '+)))))

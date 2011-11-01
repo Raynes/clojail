@@ -90,38 +90,16 @@ output of sb as a string:
 There we go! Great! This only works for vars that are explicitly dynamic, just like
 normal `binding`.
 
-Clojail can also create sandboxes based on a whitelist and a
-combination of whitelist and blacklist.
-
-```clojure
-(def sb (sandbox {:whitelist #{'println '+}})) ; Creates a new sandbox based on a whitelist.
-```
-
-If you try to evaluate anything in the sandbox that isn't whitelisted,
-it'll go boom.
-
-You can also supply a blacklist along with the whitelist.
-
-```clojure
-(def sb (sandbox {:whitelist #{'println '+} :blacklist #{'println}}))
-```
-
-This sandbox whitelists println and then blacklists it, essentially
-doing absolutely nothing. But hey, it's there. If you can find a use
-for it, good on ye. ;)
-
 Well, that's about all folks. I hope our library is to your liking, and
 I hope it's useful in your own projects. Remember to not hesitate to
 give us feedback! We especially like to hear how people are using sandboxing.
 
 ### Testers
 
-A tester is a set of any of symbols, packages, and classes, in which
-case it's a blacklist, or it's a map with keys :whitelist and
-:blacklist (not necessarily both) bound to sets defining a blacklist
-and/or whitelist.
+A tester is a set of objects, usually symbols, packages, and classes, that
+is considered as a blacklist and used to test if code is bad.
 
-A nice feature of clojail is that you can blacklist (or whitelist)
+A nice feature of clojail is that you can blacklist
 entire Java packages. Don't want anything in the java.lang.reflect
 package? Fine:
 
