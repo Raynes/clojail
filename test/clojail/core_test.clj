@@ -44,9 +44,9 @@
 (deftest dynamic-tester-test
   (let [dyn-sb (sandbox*)
         code '(+ 5 5)]
-    (is (= 10 (dyn-sb #{} code)))
-    (is (thrown? SecurityException (dyn-sb '#{+} code)))
-    (is (thrown? SecurityException (dyn-sb #{'eval} 'clojure.core/eval)))))
+    (is (= 10 (dyn-sb code #{})))
+    (is (thrown? SecurityException (dyn-sb code '#{+})))
+    (is (thrown? SecurityException (dyn-sb 'clojure.core/eval '#{eval})))))
 
 (deftest namespace-forbid-test
   (let [sb (sandbox #{'clojure.core})]

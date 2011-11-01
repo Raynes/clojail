@@ -146,6 +146,11 @@
                       (.getName p)
                       "\")"))))
 
+(defn security-exception [problem]
+  (throw
+   (SecurityException.
+    (format "You tripped the alarm! %s is bad!" problem))))
+
 (defn- make-dot
   "Returns a safe . macro."
   [tester-str]
@@ -155,7 +160,7 @@
             ~'obj# ~object#
             ~'obj-class# (class ~'obj#)]
         (if-let [~'bad# (some ~'tester-obj# [~'obj-class# ~'obj# (.getPackage ~'obj-class#)])]
-          (throw (SecurityException. (str "You tripped the alarm! " ~'bad# " is bad!")))
+          (security-exception ~'bad#)
           (. ~object# ~method# ~@args#)))))
 
 (defn- set-security-manager [s] (System/setSecurityManager s))
@@ -180,6 +185,18 @@
       (bulk-unmap nspace (remove init-defs old-defs)))
     (when (> (count new-defs) max-defs)
       (bulk-unmap nspace new-defs))))
+
+(defn- read-tester [tester]
+  (with-out-str (binding [*print-dup* true] (pr tester))))
+
+(defn- evaluator [code tester-str context nspace bindings]
+  (fn []
+    (binding [*ns* nspace
+              *read-eval* false]
+      (let [bindings (or bindings {})
+            code `(do ~(make-dot tester-str)
+                      ~(ensafen code))]
+        (with-bindings bindings (jvm-sandbox #(eval code) context))))))
 
 (defn sandbox*
   "This function creates a sandbox function that takes a tester. A tester is a set of objects
@@ -231,23 +248,20 @@
       (when refer-clojure (clojure.core/refer-clojure))
       (eval init))
     (let [init-defs (conj (user-defs nspace) 'dot)]
-      (fn [tester code & [bindings]]
-        (let [tester-str (with-out-str (binding [*print-dup* true] (pr tester)))
+      (fn [code tester & [bindings]]
+        (let [tester-str (read-tester tester)
               old-defs (user-defs nspace)
               old-security-manager (System/getSecurityManager)]
           (when jvm (set-security-manager (SecurityManager.)))
           (try
             (let [result (if-let [problem (check-form code tester nspace)] 
-                           (throw (SecurityException. (str "You tripped the alarm! " problem " is bad!")))
+                           (security-exception problem)
                            (thunk-timeout
-                            (fn []
-                              (binding [*ns* nspace
-                                        *read-eval* false]
-                                (let [bindings (or bindings {})
-                                      code `(do ~(make-dot tester-str)
-                                                ~(ensafen code))]
-                                  (with-bindings bindings (jvm-sandbox #(eval code) context)))))
-                            timeout :ms transform (ThreadGroup. "sandbox")))]
+                            (evaluator code tester-str context nspace bindings)
+                            timeout
+                            :ms
+                            transform
+                            (ThreadGroup. "sandbox")))]
               result)
             (finally (set-security-manager old-security-manager)
                      (wipe-defs init-defs old-defs max-defs nspace))))))))
@@ -259,7 +273,7 @@
    and doesn't need to be passed to the created function."
   [tester & args]
   (let [sb (apply sandbox* args)]
-    (partial sb tester)))
+    #(apply sb % tester %&)))
 
 (defn safe-read
   "Read a string from an untrusted source. Mainly just disables read-eval,
