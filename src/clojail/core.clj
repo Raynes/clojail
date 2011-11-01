@@ -53,7 +53,7 @@
          (.start thr)
          (.get task time (or (uglify-time-unit unit) unit))
          (catch TimeoutException e
-           (future-cancel task) ; Holy shit, we get to use a Clojure function!
+           (.cancel task true)
            (.stop thr) 
            (throw (TimeoutException. "Execution timed out.")))
          (catch Exception e
