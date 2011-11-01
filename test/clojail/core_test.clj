@@ -62,25 +62,29 @@
     (is (thrown? SecurityException (sb '(+ 1 2))))))
 
 (deftest init-test
-  (let [sb (sandbox secure-tester :init '(def foo 1))]
-    (is (= 1 (sb 'foo)))))
+  (let [sb (sandbox secure-tester :init '(do (use 'clojure.set) (def foo 1)))]
+    (is (= 1 (sb 'foo)))
+    (is (= clojure.set/rename-keys (sb 'rename-keys)))))
 
-(deftest ns-init-test
-  (let [ns-sb (sandbox secure-tester :ns-init `((refer-clojure) (use 'clojure.set)))]
-    (is (thrown-with-msg? ExecutionException #"Unable to resolve symbol" (sb 'rename-keys)))
-    (is (= clojure.set/rename-keys (ns-sb 'rename-keys)))))
+(defn def-forms [symbols]
+  (map #(list 'def % 0) symbols))
 
 (deftest def-test
   (let [sb-one (sandbox secure-tester-without-def)
-        sb-two (sandbox secure-tester-without-def)]
+        sb-two (sandbox secure-tester-without-def)
+        sb-three (sandbox secure-tester-without-def :init '(def foo 0))]
     (testing "Leaves new defs if they're less than max def."
-      (doseq [form (map #(list 'def % 0) '[q w e r t y u i])]
+      (doseq [form (def-forms '[q w e r t y u i])]
         (sb-one form))
       (is (thrown-with-msg? ExecutionException #"Unable to resolve symbol" (sb-one 't)))
       (is (= 0 (sb-one 'i))))
     (testing "Destroys old *and* new defs if new defs is also over max-def."
       (sb-two (cons 'do (map #(list 'def % 0) '[a b c d e f])))
-      (is (thrown-with-msg? ExecutionException #"Unable to resolve symbol" (sb 'f))))))
+      (is (thrown-with-msg? ExecutionException #"Unable to resolve symbol" (sb 'f))))
+    (testing "Leaves init defs."
+      (doseq [form (def-forms '[q w e r t y])]
+        (sb-three form))
+      (is (= 0 (sb-three 'foo))))))
 
 (deftest require-test
   (let [sb (sandbox secure-tester)]

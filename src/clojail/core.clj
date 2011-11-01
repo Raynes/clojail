@@ -216,10 +216,9 @@
 
    :init, some (quoted) code to run in the sandbox's namespace, but outside of the sandbox.
 
-   :ns-init, a sequence of calls to things like refer-clojure, require, use, etc. It should
-   look like this: :ns-init `((refer-clojure) (require foo) ...). If this key isn't passed,
-   the ns is set up by calling refer-clojure. If you pass this key, you should always pass
-   refer-clojure first.
+   :refer-clojure, true or false. If true (the default), automatically refer-clojure in the ns.
+   You might want to set this to false at some point if you're working with the namespace in the
+   :init key.
 
    This function will return a new function that you should bind to something. You can call
    this function with code and it will be evaluated in the sandbox. The function also takes
@@ -232,18 +231,18 @@
             (let [writer (java.io.StringWriter.)]
               (sb '(println \"blah\") {#'*out* writer}) (str writer))
    The above example returns \"blah\\n\""
-  [& {:keys [timeout namespace context jvm transform init ns-init max-defs]
+  [& {:keys [timeout namespace context jvm transform init ns-init max-defs refer-clojure]
       :or {timeout 10000
            namespace (gensym "sandbox")
            context (-> (permissions) domain context)
            jvm true
            transform eagerly-consume
-           ns-init [`(refer-clojure)]
+           refer-clojure true
            max-defs 5}}]
   (let [nspace (create-ns namespace)]
     (binding [*ns* nspace]
-      (eval `(do ~@ns-init
-                 ~init)))
+      (when refer-clojure (clojure.core/refer-clojure))
+      (eval init))
     (let [init-defs (conj (user-defs nspace) 'dot)]
       (fn [tester code & [bindings]]
         (let [tester-str (with-out-str (binding [*print-dup* true] (pr tester)))
