@@ -155,8 +155,7 @@
   "Returns a safe . macro."
   [tester-str]
   `(defmacro ~'dot [object# method# & args#]
-     `(let [~'tester-obj# (binding [*read-eval* true]
-                            (read-string ~~tester-str))
+     `(let [~'tester-obj# (binding [*read-eval* true] (read-string ~~tester-str))
             ~'obj# ~object#
             ~'obj-class# (class ~'obj#)]
         (if-let [~'bad# (some ~'tester-obj# [~'obj-class# ~'obj# (.getPackage ~'obj-class#)])]
