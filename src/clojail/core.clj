@@ -70,24 +70,9 @@
          s)
        (catch RuntimeException _ s)))
 
-(defn- separate
-  "Take a collection and break it and its contents apart until we have
-   a set of things to check for badness against."
-  [s nspace]
-  (set
-   (flatten
-    (map #(if (symbol? %)
-            (let [resolved-s (safe-resolve % nspace)
-                  s-meta (meta resolved-s)]
-              (if s-meta
-                [resolved-s ((juxt (comp symbol str :ns) :ns :name) s-meta)]
-                (let [[bottom] (map symbol (.split (str %) "/"))
-                      resolved-s (safe-resolve bottom nspace)]
-                  (if (class? resolved-s)
-                    [resolved-s %]
-                    %))))
-            %)
-         (flatten s)))))
+(defn flatten-all
+  "The core flatten doesn't flatten maps."
+  [form] (remove coll? (tree-seq coll? seq form)))
 
 (defn- collify
   "If form isn't a collection, wrap it in a vector."
@@ -102,6 +87,25 @@
             (= 'quote (first form))))
     form
     (walk macroexpand-most identity (macroexpand form))))
+
+(defn- separate
+  "Take a collection and break it and its contents apart until we have
+   a set of things to check for badness against."
+  [s nspace]
+  (set
+   (flatten-all
+    (map #(if (symbol? %)
+            (let [resolved-s (safe-resolve % nspace)
+                  s-meta (meta resolved-s)]
+              (if s-meta
+                [resolved-s ((juxt (comp symbol str :ns) :ns :name) s-meta)]
+                (let [[bottom] (map symbol (.split (str %) "/"))
+                      resolved-s (safe-resolve bottom nspace)]
+                  (if (class? resolved-s)
+                    [resolved-s %]
+                    %))))
+            %)
+         (flatten-all (collify (macroexpand-most s)))))))
 
 ;; Because the dot (.) interop form is a special form, we can't just rebind it or anything.
 ;; Instead, we need to replace it entirely with a safe macro of our own. To do this, we need
@@ -125,16 +129,13 @@
   (comp dotify macroexpand-most))
 
 (defn- mutilate
-  "Macroexpand and separate pieces to create a set of symbols and such
-   that is easy to check for badness."
-  [form nspace]
-  (separate (collify (macroexpand-most form)) nspace))
+  "Macroexpand and separate pieces to create a set of symbols an")
 
 ;; The clojail equivalent of motion detectors.
 (defn check-form
   "Check a form to see if it trips a tester."
   [form tester nspace]
-  (some tester (mutilate form nspace)))
+  (some tester (separate form nspace)))
 
 ;; We have to run the sandbox against packages as well as classes,
 ;; but macros can't embed Package objects in code by default. This

@@ -106,3 +106,7 @@
     (is (thrown-with-msg? SecurityException #"You tripped the alarm!"
           (sb '(clojure.core/+ 3 3))))
     (is (= 3 (sb '+)))))
+
+(deftest block-maps
+  (let [sb (sandbox secure-tester)]
+    (is (thrown? SecurityException (sb '{:foo (eval '(+ 3 3))})))))
