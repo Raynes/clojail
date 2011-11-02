@@ -84,6 +84,7 @@
 
 (deftest security-off-test
   (let [sb (sandbox secure-tester :jvm false)]
+    (set-security-manager nil)
     (is (= "foo\n" (sb '(slurp "test/test.txt"))))))
 
 (deftest block-fields-test

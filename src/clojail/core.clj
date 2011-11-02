@@ -163,8 +163,6 @@
           (security-exception ~'bad#)
           (. ~object# ~method# ~@args#)))))
 
-(defn- set-security-manager [s] (System/setSecurityManager s))
-
 (defn- user-defs
   "Find get a set of all the symbols of vars defined in a namespace."
   [nspace] (set (keys (ns-interns nspace))))
@@ -197,6 +195,12 @@
             code `(do ~(make-dot tester-str)
                       ~(ensafen code))]
         (with-bindings bindings (jvm-sandbox #(eval code) context))))))
+
+(defn set-security-manager
+  "Sets the system security manager to whatever you pass. Passing nil is
+   the equivalent of turning it off entirely (which is usually how the JVM
+   starts up)."
+  [s] (System/setSecurityManager s))
 
 (defn sandbox*
   "This function creates a sandbox function that takes a tester. A tester is a set of objects
@@ -250,8 +254,7 @@
     (let [init-defs (conj (user-defs nspace) 'dot)]
       (fn [code tester & [bindings]]
         (let [tester-str (read-tester tester)
-              old-defs (user-defs nspace)
-              old-security-manager (System/getSecurityManager)]
+              old-defs (user-defs nspace)]
           (when jvm (set-security-manager (SecurityManager.)))
           (try
             (let [result (if-let [problem (check-form code tester nspace)] 
@@ -263,8 +266,7 @@
                             transform
                             (ThreadGroup. "sandbox")))]
               result)
-            (finally (set-security-manager old-security-manager)
-                     (wipe-defs init-defs old-defs max-defs nspace))))))))
+            (finally (wipe-defs init-defs old-defs max-defs nspace))))))))
 
 (defn sandbox
   "Convenience wrapper function around sandbox* to create a sandbox function out of a tester.
