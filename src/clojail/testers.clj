@@ -8,7 +8,7 @@
   [s] (Package/getPackage s))
 
 (def secure-tester-without-def "A tester that attempts to be secure, and allows def."
-  #{'alter-var-root 'intern 'eval 'catch
+  #{'alter-var-root 'intern 'eval 'catch clojure.lang.Compiler
     'load-string 'load-reader 'addMethod 'ns-resolve 'resolve 'find-var
     '*read-eval* clojure.lang.Ref clojure.lang.Reflector 'ns-publics
     'ns-unmap 'set! 'ns-map 'ns-interns 'the-ns clojure.lang.Namespace

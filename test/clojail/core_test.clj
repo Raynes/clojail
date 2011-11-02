@@ -17,6 +17,7 @@
   (is (= 7 (sb '(-> "bar.txt" java.io.File. .getName .length))))
   (is (thrown? Exception (sb '(-> java.io.File .getMethods (aget 0) .getName))))
   (is (thrown? Exception (sb '(-> java.io.File .getMethods (aget 0) ((memfn getName))))))
+  (is (thrown? Exception (sb '((clojure.lang.Compiler/maybeResolveIn *ns* (symbol "eval")) '(+ 3 3)))))
   (is (thrown? Exception (sb '(inc (clojure.core/eval 1))))))
 
 (deftest sandbox-config-test
