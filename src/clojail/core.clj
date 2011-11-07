@@ -167,7 +167,7 @@
   "Find get a set of all the symbols of vars defined in a namespace."
   [nspace] (set (keys (ns-interns nspace))))
 
-(defn bulk-unmap
+(defn- bulk-unmap
   "Unmap a bunch of vars."
   [nspace vars]
   (doseq [n vars]
