@@ -232,12 +232,7 @@
    an optional second parameter which is a hashmap of vars to values that will be passed to
    with-bindings. Since Clojure 1.3, only vars explicitly declared as dynamic are able to be
    rebound. As a result, only those vars will work here. If this doesn't work for you,
-   read about the :init key.
-
-   Example: (def sb (sandbox #{'alter-var-root 'java.lang.Thread} :timeout 5000))
-            (let [writer (java.io.StringWriter.)]
-              (sb '(println \"blah\") {#'*out* writer}) (str writer))
-   The above example returns \"blah\\n\""
+   read about the :init key."
   [& {:keys [timeout namespace context jvm transform
              init ns-init max-defs refer-clojure]
       :or {timeout 10000
