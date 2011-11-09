@@ -252,15 +252,14 @@
               old-defs (user-defs nspace)]
           (when jvm (set-security-manager (SecurityManager.)))
           (try
-            (let [result (if-let [problem (check-form code tester nspace)] 
-                           (security-exception problem)
-                           (thunk-timeout
-                            (evaluator code tester-str context nspace bindings)
-                            timeout
-                            :ms
-                            transform
-                            (ThreadGroup. "sandbox")))]
-              result)
+            (if-let [problem (check-form code tester nspace)] 
+              (security-exception problem)
+              (thunk-timeout
+               (evaluator code tester-str context nspace bindings)
+               timeout
+               :ms
+               transform
+               (ThreadGroup. "sandbox")))
             (finally (wipe-defs init-defs old-defs max-defs nspace))))))))
 
 (defn sandbox
