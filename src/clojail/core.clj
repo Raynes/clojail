@@ -74,10 +74,6 @@
   "The core flatten doesn't flatten maps."
   [form] (remove coll? (tree-seq coll? seq form)))
 
-(defn- collify
-  "If form isn't a collection, wrap it in a vector."
-  [form] (if (coll? form) form [form]))
-
 (defn- macroexpand-most
   "Macroexpand most, but not all. Leave non-collections and quoted things alone."
   [form]
@@ -105,7 +101,7 @@
                     [resolved-s %]
                     %))))
             %)
-         (flatten-all (collify (macroexpand-most s)))))))
+         (-> s macroexpand-most vector flatten-all)))))
 
 ;; Because the dot (.) interop form is a special form, we can't just rebind it or anything.
 ;; Instead, we need to replace it entirely with a safe macro of our own. To do this, we need

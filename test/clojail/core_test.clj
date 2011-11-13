@@ -1,6 +1,7 @@
 (ns clojail.core-test
   (:use [clojail core testers jvm]
         clojure.test)
+  (:require clojure.set) ;; For testing.
   (:import java.io.StringWriter
            java.util.concurrent.ExecutionException))
 
