@@ -13,14 +13,10 @@ welcome!
 
 ## Usage
 
-You can get this library from clojars via
-[cake](http://github.com/ninjudd/cake) or
-[leiningen](http://github.com/technomancy/leiningen). The instructions
-are the same.
+You can get this library from clojars via Leiningen.
 
-First, add `[clojail "0.4.6-beta1"]` to your
-project.clj. After than, just run `cake deps` or `lein deps` depending
-on what build tool you use.
+First, add `[clojail "0.5.0"]` to your
+project.clj. After than, just run `lein deps.
 
 Because clojail employs the JVM's built in sandboxing, you'll need to
 have a `~/.java.policy` file to define permissions for your own
