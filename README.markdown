@@ -16,7 +16,7 @@ welcome!
 You can get this library from clojars via Leiningen.
 
 First, add `[clojail "0.5.0"]` to your
-project.clj. After than, just run `lein deps.
+project.clj. After than, just run `lein deps`.
 
 Because clojail employs the JVM's built in sandboxing, you'll need to
 have a `~/.java.policy` file to define permissions for your own
