@@ -22,7 +22,8 @@
   val)
 
 ;; It sucks to have to deal with TimeUnits. They're so damned long.
-(def uglify-time-unit "Create a map of pretty keywords to ugly TimeUnits"
+(def ^{:doc "Create a map of pretty keywords to ugly TimeUnits"}
+  uglify-time-unit
   (into {} (for [[enum aliases] {TimeUnit/NANOSECONDS [:ns :nanoseconds]
                                  TimeUnit/MICROSECONDS [:us :microseconds]
                                  TimeUnit/MILLISECONDS [:ms :milliseconds]
@@ -68,7 +69,10 @@
   (try (if-let [resolved (ns-resolve nspace s)]
          resolved
          s)
-       (catch RuntimeException _ s)))
+       ;; Catching both of these exceptions appears to be necessary, because the exception that
+       ;; is thrown appears to be different depending on which version of Clojure you use.
+       (catch RuntimeException _ s)
+       (catch ClassNotFoundException _ s)))
 
 (defn flatten-all
   "The core flatten doesn't flatten maps."
@@ -121,7 +125,9 @@
                 (recurse form)))))))
 
 ;; Compose our earlier functions.
-(def ^{:private true} ensafen "Fix code to make interop safe."
+(def ^{:private true
+       :doc "Fix code to make interop safe."}
+  ensafen
   (comp dotify macroexpand-most))
 
 (defn- mutilate

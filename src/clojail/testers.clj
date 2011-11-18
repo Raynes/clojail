@@ -7,7 +7,8 @@
   "Create a package object for putting in a tester."
   [s] (Package/getPackage s))
 
-(def secure-tester-without-def "A tester that attempts to be secure, and allows def."
+(def ^{:doc "A tester that attempts to be secure, and allows def."}
+  secure-tester-without-def
   #{'alter-var-root 'intern 'eval 'catch clojure.lang.Compiler
     'load-string 'load-reader 'addMethod 'ns-resolve 'resolve 'find-var
     '*read-eval* clojure.lang.Ref clojure.lang.Reflector 'ns-publics
@@ -20,5 +21,6 @@
     (p "java.util.concurrent")
     (p "java.awt")})
 
-(def secure-tester "A somewhat secure tester. No promises."
+(def ^{:doc "A somewhat secure tester. No promises."}
+  secure-tester
   (conj secure-tester-without-def 'def))
