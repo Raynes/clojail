@@ -1,5 +1,7 @@
 ## Introduction
 
+[![Build Status](https://secure.travis-ci.org/Raynes/clojail.png)](http://travis-ci.org/Raynes/clojail)
+
 Welcome to the wonderful world of clojail! Clojail is a library for
 sandboxing Clojure code. Why is this useful? Well, for tons of
 reasons. Clojurians have used this library for a number of different things.
