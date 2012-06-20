@@ -112,3 +112,19 @@
 (deftest block-maps
   (let [sb (sandbox secure-tester)]
     (is (thrown? SecurityException (sb '{:foo (eval '(+ 3 3))})))))
+
+(deftest blanket-test
+  (let [sb (sandbox (blanket #{} "clojail"))]
+    (is (thrown? SecurityException
+                 (sb '(clojail.jvm/priv-action "this wont work anyways so why would I write something meaningful."))))))
+
+(deftest meta-meta-meta-test
+  (let [sb (sandbox secure-tester)]
+    (is (thrown? SecurityException
+                 (sb '(java.security.AccessController/doPrivileged
+                       (reify java.security.PrivilegedExceptionAction
+                         (run [_] (slurp (.getInputStream  (.exec (Runtime/getRuntime) "whoami")))))))))
+    (is (thrown? SecurityException
+                 (sb '(java.security.AccessController/doPrivileged
+                       (reify java.security.PrivilegedAction
+                         (run [_] (slurp (.getInputStream  (.exec (Runtime/getRuntime) "whoami")))))))))))

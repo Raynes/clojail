@@ -102,7 +102,7 @@
                 (let [[bottom] (map symbol (.split (str %) "/"))
                       resolved-s (safe-resolve bottom nspace)]
                   (if (class? resolved-s)
-                    [resolved-s %]
+                    [resolved-s (.getPackage resolved-s) %]
                     %))))
             %)
          (-> s macroexpand-most vector flatten-all)))))
