@@ -130,9 +130,6 @@
   ensafen
   (comp dotify macroexpand-most))
 
-(defn- mutilate
-  "Macroexpand and separate pieces to create a set of symbols an")
-
 ;; The clojail equivalent of motion detectors.
 (defn check-form
   "Check a form to see if it trips a tester."
