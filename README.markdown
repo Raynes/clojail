@@ -15,10 +15,15 @@ welcome!
 
 ## Usage
 
+*WARNING*
+As of the 0.6.0 release, clojail is no longer compatible with Clojure 1.2.1.
+You should absolutely be using the latest version of clojail though so please
+do not stick with old versions. It's time to upgrade boys and girls.
+
 You can get this library from clojars via Leiningen.
 
-First, add `[clojail "0.5.0"]` to your
-project.clj. After that, just run `lein deps`.
+First, go to [clojars](http://clojars.org/clojail) and see what the latest version is.
+Next, add it to your project.clj. After that, just run `lein deps`.
 
 Because clojail employs the JVM's built in sandboxing, you'll need to
 have a `~/.java.policy` file to define permissions for your own
@@ -108,6 +113,18 @@ package? Fine:
 
 Now you have a tester that will scream rape if someone tries to
 execute code using any classes from the reflect package.
+
+#### Serializable functions
+
+As of the 0.6.0 release of clojail, you can put functions in testers with the caveat that
+they must be serializable. This means you have to use [serializable-fn](https://github.com/technomancy/serializable-fn).
+It is nice in that it can even serialize (most) closures correctly, so as long as your fns
+are not too complex, they should work just fine.
+
+This allows for some added flexibility. An example of this new feature is the new `blanket` function
+in `clojail.testers`. It allows you to blanket blacklist all namespaces under a common prefix.
+It looks up the namespaces on the classpath using [bultitude](https://github.com/Raynes/bultitude)
+and adds serializable functions to the tester to check for the prefix itself.
 
 ## Warning
 
