@@ -116,7 +116,9 @@
 (deftest blanket-test
   (let [sb (sandbox (blanket #{} "clojail"))]
     (is (thrown? SecurityException
-                 (sb '(clojail.jvm/priv-action "this wont work anyways so why would I write something meaningful."))))))
+                 (sb '(clojail.jvm/priv-action "this wont work anyways so why would I write something meaningful."))))
+    (is (thrown? SecurityException
+                 (sb '(.invoke (clojail.jvm$jvm_sandbox.) (fn [] 0) nil))))))
 
 (deftest meta-meta-meta-test
   (let [sb (sandbox secure-tester)]

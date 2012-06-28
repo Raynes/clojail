@@ -5,6 +5,7 @@
   (:use clojure.stacktrace
         [clojure.walk :only [walk postwalk-replace]]
         clojail.jvm)
+  (:require serializable.fn)
   (:import (java.util.concurrent TimeoutException TimeUnit FutureTask)
            (clojure.lang LispReader$ReaderException)))
 
@@ -102,7 +103,7 @@
                 (let [[bottom] (map symbol (.split (str %) "/"))
                       resolved-s (safe-resolve bottom nspace)]
                   (if (class? resolved-s)
-                    [resolved-s (.getPackage resolved-s) %]
+                    [resolved-s %]
                     %))))
             %)
          (-> s macroexpand-most vector flatten-all)))))
@@ -130,11 +131,44 @@
   ensafen
   (comp dotify macroexpand-most))
 
+(defprotocol Checkable
+  "A protocol for things that can be checked against objects for safety."
+  (bad? [this obj] "Check if an object should be allowed or not. Returns true if the object is unsafe."))
+
+(extend-protocol Checkable
+  clojure.lang.Var
+  (bad? [this obj] (= this obj))
+
+  clojure.lang.IFn
+  (bad? [this obj] (this obj))
+
+  java.lang.String
+  (bad? [this obj] (-> this read-string eval (bad? obj)))
+
+  java.lang.Package
+  (bad? [this obj]
+    (condp = (type obj)
+      java.lang.Package (= this obj)
+      java.lang.Class   (= this (.getPackage obj))
+      nil))
+
+  clojure.lang.Symbol
+  (bad? [this obj] (= this obj))
+
+  java.lang.Object
+  (bad? [this obj] (= this obj))
+
+  nil
+  (bad? [this obj] false))
+
+(defn unsafe? [tester obj]
+  (and (some #(bad? % obj) tester) obj))
+
 ;; The clojail equivalent of motion detectors.
 (defn check-form
   "Check a form to see if it trips a tester."
   [form tester nspace]
-  (some tester (separate form nspace)))
+  (some (partial unsafe? tester) (separate form nspace)))
 
 ;; We have to run the sandbox against packages as well as classes,
 ;; but macros can't embed Package objects in code by default. This
@@ -145,6 +179,12 @@
      (.write out (str "#=(java.lang.Package/getPackage \""
                       (.getName p)
                       "\")"))))
+
+(defmethod print-dup clojure.lang.Fn
+  [p out]
+  (if (= :serializable.fn/serializable-fn (type p))
+    (.write out (str "#=(eval " (binding [*print-dup* false] (pr-str p)) ")"))
+    (print-ctor p (fn [p out]) out)))
 
 (defn security-exception [problem]
   (throw
@@ -158,7 +198,7 @@
      `(let [~'tester-obj# (binding [*read-eval* true] (read-string ~~tester-str))
             ~'obj# ~object#
             ~'obj-class# (class ~'obj#)]
-        (if-let [~'bad# (some ~'tester-obj# [~'obj-class# ~'obj# (.getPackage ~'obj-class#)])]
+        (if-let [~'bad# (some (partial unsafe? ~'tester-obj#) [~'obj-class# ~'obj# (.getPackage ~'obj-class#)])]
           (security-exception ~'bad#)
           (. ~object# ~method# ~@args#)))))
 
