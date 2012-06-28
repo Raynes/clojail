@@ -1,4 +1,4 @@
-(defproject clojail "0.5.2"
+(defproject clojail "0.6.0"
   :description "A sandboxing library."
   :dependencies [[org.clojure/clojure "1.4.0"]
                  [bultitude "0.1.6"]
