@@ -46,7 +46,7 @@
   secure-tester-without-def
   (-> #{clojure.lang.Compiler clojure.lang.Ref clojure.lang.Reflector
         clojure.lang.Namespace 'System/out 'System/in 'System/err
-        clojure.lang.Var}
+        clojure.lang.Var clojure.lang.RT}
       (blacklist-packages "java.lang.reflect"
                           "java.security"
                           "java.util.concurrent"
