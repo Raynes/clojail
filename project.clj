@@ -1,4 +1,4 @@
-(defproject clojail "0.6.1"
+(defproject clojail "0.6.2"
   :description "A sandboxing library."
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
