@@ -130,3 +130,8 @@
                  (sb '(java.security.AccessController/doPrivileged
                        (reify java.security.PrivilegedAction
                          (run [_] (slurp (.getInputStream  (.exec (Runtime/getRuntime) "whoami")))))))))))
+
+(deftest blacklist-symbol-classes
+  (let [sb (sandbox (blacklist-symbols #{} 'eval))]
+    (is (thrown? SecurityException
+                 (sb '(.invoke (clojure.core$eval.) '(+ 3 3)))))))

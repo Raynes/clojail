@@ -9,15 +9,30 @@
   "Create a package object for putting in a tester."
   [s] (Package/getPackage s))
 
-(defn symbol-checker [n]
+(defn prefix-checker [n]
   (sfn/fn [s]
           (when (symbol? s)
             (.startsWith (name s) (str n)))))
 
+(defn suffix-tester [n]
+  (sfn/fn [s]
+          (when (symbol? s)
+            (.endsWith (name s) (munge (str "$" n))))))
+
 (defn blacklist-ns
   "Blacklist a Clojure namespace."
   [tester n]
-  (conj tester n (symbol-checker n)))
+  (conj tester n (prefix-checker n)))
+
+(defn blacklist-symbols
+  "Blacklist symbols."
+  [tester & symbols]
+  (into tester (concat symbols (map suffix-tester symbols))))
+
+(defn blacklist-packages
+  "Blacklist a bunch of Java packages at once."
+  [tester & packages]
+  (into tester (map p packages)))
 
 (defn blanket
   "Takes a tester and some namespace prefixes as strings. Looks up
@@ -29,18 +44,20 @@
 
 (def ^{:doc "A tester that attempts to be secure, and allows def."}
   secure-tester-without-def
-  (-> #{'alter-var-root 'intern 'eval 'catch clojure.lang.Compiler
-        'load-string 'load-reader 'addMethod 'ns-resolve 'resolve 'find-var
-        '*read-eval* clojure.lang.Ref clojure.lang.Reflector 'ns-publics
-        'ns-unmap 'set! 'ns-map 'ns-interns 'the-ns clojure.lang.Namespace
-        'push-thread-bindings 'pop-thread-bindings 'future-call 'agent 'send
-        'send-off 'pmap 'pcalls 'pvals 'in-ns 'System/out 'System/in 'System/err
-        'with-redefs
-        clojure.lang.Var
-        (p "java.lang.reflect")
-        (p "java.security")
-        (p "java.util.concurrent")
-        (p "java.awt")}
+  (-> #{clojure.lang.Compiler clojure.lang.Ref clojure.lang.Reflector
+        clojure.lang.Namespace 'System/out 'System/in 'System/err
+        clojure.lang.Var}
+      (blacklist-packages "java.lang.reflect"
+                          "java.security"
+                          "java.util.concurrent"
+                          "java.awt")
+      (blacklist-symbols
+       'alter-var-root 'intern 'eval 'catch 
+       'load-string 'load-reader 'addMethod 'ns-resolve 'resolve 'find-var
+       '*read-eval* 'ns-publics 'ns-unmap 'set! 'ns-map 'ns-interns 'the-ns
+       'push-thread-bindings 'pop-thread-bindings 'future-call 'agent 'send
+       'send-off 'pmap 'pcalls 'pvals 'in-ns 'System/out 'System/in 'System/err
+       'with-redefs)
       (blanket "clojail")))
 
 (def ^{:doc "A somewhat secure tester. No promises."}
