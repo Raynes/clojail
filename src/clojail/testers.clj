@@ -5,6 +5,16 @@
   (:require [bultitude.core :as nses]
             [serializable.fn :as sfn]))
 
+(defn ->map
+  "If if something other than a map is passed, return a map that
+   looks like {:objs s, :serializable-fns []}. If a map is passed,
+   return it."
+  [s]
+  (if (map? s)
+    s
+    {:objs s
+     :serializable-fns []}))
+
 (defn p
   "Create a package object for putting in a tester."
   [s] (Package/getPackage s))
@@ -22,17 +32,21 @@
 (defn blacklist-ns
   "Blacklist a Clojure namespace."
   [tester n]
-  (conj tester n (prefix-checker n)))
+  (-> (->map tester)
+      (update-in [:objs] conj n)
+      (update-in [:serializable-fns] conj (prefix-checker n))))
 
 (defn blacklist-symbols
   "Blacklist symbols."
   [tester & symbols]
-  (into tester (concat symbols (map suffix-tester symbols))))
+  (-> (->map tester)
+      (update-in [:objs] into symbols)
+      (update-in [:serializable-fns] into (map suffix-tester symbols))))
 
 (defn blacklist-packages
   "Blacklist a bunch of Java packages at once."
   [tester & packages]
-  (into tester (map p packages)))
+  (update-in (->map tester) [:objs] into (map p packages)))
 
 (defn blanket
   "Takes a tester and some namespace prefixes as strings. Looks up
@@ -40,7 +54,8 @@
    the classpath matching those prefixes."
   [tester & prefixes]
   (reduce blacklist-ns tester
-          (mapcat (partial nses/namespaces-on-classpath :prefix) prefixes)))
+          (mapcat (partial nses/namespaces-on-classpath :prefix)
+                  prefixes)))
 
 (def ^{:doc "A tester that attempts to be secure, and allows def."}
   secure-tester-without-def
@@ -62,4 +77,4 @@
 
 (def ^{:doc "A somewhat secure tester. No promises."}
   secure-tester
-  (conj secure-tester-without-def 'def))
+  (update-in secure-tester-without-def [:objs] conj 'def))

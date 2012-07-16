@@ -162,7 +162,7 @@
   (bad? [this obj] false))
 
 (defn unsafe? [tester obj]
-  (and (some #(bad? % obj) tester) obj))
+  (and (some #(bad? % obj) (mapcat val tester)) obj))
 
 ;; The clojail equivalent of motion detectors.
 (defn check-form
@@ -183,7 +183,7 @@
 (defmethod print-dup clojure.lang.Fn
   [p out]
   (if (= :serializable.fn/serializable-fn (type p))
-    (.write out (str "#=(eval " (binding [*print-dup* false] (pr-str p)) ")"))
+    (.write out (binding [*print-dup* false] (pr-str p)))
     (print-ctor p (fn [p out]) out)))
 
 (defn security-exception [problem]
