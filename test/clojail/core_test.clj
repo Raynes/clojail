@@ -6,7 +6,8 @@
            java.util.concurrent.ExecutionException))
 
 (def sb (sandbox secure-tester))
-(def easy (sandbox #{}))
+
+(def easy (sandbox []))
 
 (deftest dot-test
   (is (= 4 (easy '(. "dots" (length))))))
@@ -37,21 +38,19 @@
   (is (= 1 (sb '(-> 0 inc dec inc))))
   (is (= '(. "" length) (sb ''(. "" length)))))
 
-;; make sure macros are expanded outside-in, not inside-out
 (deftest macroexpand-most-test
   (is (= (range 1 11) (sb '(->> (inc x)
                                 (for [x (range 0 10)]))))))
 
-;; sandbox* lets you change tester on the fly
 (deftest dynamic-tester-test
   (let [dyn-sb (sandbox*)
         code '(+ 5 5)]
-    (is (= 10 (dyn-sb code #{})))
-    (is (thrown? SecurityException (dyn-sb code '#{+})))
-    (is (thrown? SecurityException (dyn-sb 'clojure.core/eval '#{eval})))))
+    (is (= 10 (dyn-sb code [])))
+    (is (thrown? SecurityException (dyn-sb code [(blacklist-symbols '#{+})])))
+    (is (thrown? SecurityException (dyn-sb 'clojure.core/eval [(blacklist-symbols '#{eval})])))))
 
 (deftest namespace-forbid-test
-  (let [sb (sandbox #{'clojure.core})]
+  (let [sb (sandbox [(blacklist-nses [(the-ns 'clojure.core)])])]
     (is (thrown? SecurityException (sb '(+ 1 2))))))
 
 (deftest init-test
@@ -104,7 +103,7 @@
     (is (thrown-with-msg? ExecutionException #"access denied" (sb '(spit "foo2" "evil"))))))
 
 (deftest block-specific-test
-  (let [sb (sandbox #{#'clojure.core/+} :init '(def + 3))]
+  (let [sb (sandbox [(blacklist-objects [#'clojure.core/+])] :init '(def + 3))]
     (is (thrown-with-msg? SecurityException #"You tripped the alarm!"
           (sb '(clojure.core/+ 3 3))))
     (is (= 3 (sb '+)))))
@@ -114,7 +113,7 @@
     (is (thrown? SecurityException (sb '{:foo (eval '(+ 3 3))})))))
 
 (deftest blanket-test
-  (let [sb (sandbox (blanket #{} "clojail"))]
+  (let [sb (sandbox [(blanket "clojail")])]
     (is (thrown? SecurityException
                  (sb '(clojail.jvm/priv-action "this wont work anyways so why would I write something meaningful."))))
     (is (thrown? SecurityException
@@ -132,6 +131,6 @@
                          (run [_] (slurp (.getInputStream  (.exec (Runtime/getRuntime) "whoami")))))))))))
 
 (deftest blacklist-symbol-classes
-  (let [sb (sandbox (blacklist-symbols #{} 'eval))]
+  (let [sb (sandbox [(blacklist-symbols '#{eval})])]
     (is (thrown? SecurityException
                  (sb '(.invoke (clojure.core$eval.) '(+ 3 3)))))))
