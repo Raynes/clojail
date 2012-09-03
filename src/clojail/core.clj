@@ -1,6 +1,3 @@
-;; Clojail is an easy way to sandbox your code. Whether you want to allow evaluation on a website,
-;; in an IRC bot, or anything else you can think of, Clojail wants to be the easiest and most
-;; comprehensive way to do that. But it isn't easy.
 (ns clojail.core
   (:use clojure.stacktrace
         [clojure.walk :only [walk postwalk-replace]]
@@ -9,11 +6,6 @@
   (:import (java.util.concurrent TimeoutException TimeUnit FutureTask)
            (clojure.lang LispReader$ReaderException)))
 
-;; postwalk is like a magical recursive doall, to force lazy-seqs
-;; within the timeout context; but since it doesn't maintain perfect
-;; structure for *every* data type, we want to actually return the
-;; original value after we force it, not the result of postwalk
-;; replacement
 (defn eagerly-consume
   "Recursively force all lazy-seqs in val."
   [val]
@@ -22,7 +14,6 @@
     (catch Throwable _))
   val)
 
-;; It sucks to have to deal with TimeUnits. They're so damned long.
 (def ^{:doc "Create a map of pretty keywords to ugly TimeUnits"}
   uglify-time-unit
   (into {} (for [[enum aliases] {TimeUnit/NANOSECONDS [:ns :nanoseconds]
@@ -32,11 +23,6 @@
                  alias aliases]
              {alias enum})))
 
-;; This function uses some deprecated Java methods to stop threads, but the
-;; reason they're deprecated doesn't really apply here. Just because people
-;; don't use them properly doesn't mean they aren't useful.
-;;
-;; This function is useful in general, and that's why it is public.
 (defn thunk-timeout
   "Takes a function and an amount of time to wait for the function to finish
    executing. The sandbox can do this for you. unit is any of :ns, :us, :ms,
@@ -108,9 +94,6 @@
             %)
          (-> s macroexpand-most vector flatten-all)))))
 
-;; Because the dot (.) interop form is a special form, we can't just rebind it or anything.
-;; Instead, we need to replace it entirely with a safe macro of our own. To do this, we need
-;; to replace all . symbols with 'dot', the name of our own safe dot macro.
 (defn- dotify
   "Replace all . symbols with 'dot."
   [form]
@@ -125,66 +108,18 @@
                 . (cons 'dot (recurse (rest form)))
                 (recurse form)))))))
 
-;; Compose our earlier functions.
 (def ^{:private true
        :doc "Fix code to make interop safe."}
   ensafen
   (comp dotify macroexpand-most))
 
-(defprotocol Checkable
-  "A protocol for things that can be checked against objects for safety."
-  (bad? [this obj] "Check if an object should be allowed or not. Returns true if the object is unsafe."))
-
-(extend-protocol Checkable
-  clojure.lang.Var
-  (bad? [this obj] (= this obj))
-
-  clojure.lang.IFn
-  (bad? [this obj] (this obj))
-
-  java.lang.String
-  (bad? [this obj] (-> this read-string eval (bad? obj)))
-
-  java.lang.Package
-  (bad? [this obj]
-    (condp = (type obj)
-      java.lang.Package (= this obj)
-      java.lang.Class   (= this (.getPackage obj))
-      nil))
-
-  clojure.lang.Symbol
-  (bad? [this obj] (= this obj))
-
-  java.lang.Object
-  (bad? [this obj] (= this obj))
-
-  nil
-  (bad? [this obj] false))
-
 (defn unsafe? [tester obj]
-  (and (some #(bad? % obj) tester) obj))
+  (some #(% obj) tester))
 
-;; The clojail equivalent of motion detectors.
 (defn check-form
   "Check a form to see if it trips a tester."
   [form tester nspace]
   (some (partial unsafe? tester) (separate form nspace)))
-
-;; We have to run the sandbox against packages as well as classes,
-;; but macros can't embed Package objects in code by default. This
-;; is a simple print-dup method so that we can embed them in our dot
-;; macro.
-(defmethod print-dup java.lang.Package
-  ([p out]
-     (.write out (str "#=(java.lang.Package/getPackage \""
-                      (.getName p)
-                      "\")"))))
-
-(defmethod print-dup clojure.lang.Fn
-  [p out]
-  (if (= :serializable.fn/serializable-fn (type p))
-    (.write out (str "#=(eval " (binding [*print-dup* false] (pr-str p)) ")"))
-    (print-ctor p (fn [p out]) out)))
 
 (defn security-exception [problem]
   (throw
@@ -195,11 +130,11 @@
   "Returns a safe . macro."
   [tester-str]
   `(defmacro ~'dot [object# method# & args#]
-     `(let [~'tester-obj# (binding [*read-eval* true] (read-string ~~tester-str))
+     `(let [~'tester-obj# (binding [*read-eval* true] (eval (read-string ~~tester-str)))
             ~'obj# ~object#
             ~'obj-class# (class ~'obj#)]
-        (if-let [~'bad# (some (partial unsafe? ~'tester-obj#) [~'obj-class# ~'obj# (.getPackage ~'obj-class#)])]
-          (security-exception ~'bad#)
+        (if-let [~'bad# (some (partial clojail.core/unsafe? ~'tester-obj#) [~'obj-class# ~'obj# (.getPackage ~'obj-class#)])]
+          (clojail.core/security-exception ~'bad#)
           (. ~object# ~method# ~@args#)))))
 
 (defn- user-defs
@@ -222,9 +157,6 @@
       (bulk-unmap nspace (remove init-defs old-defs)))
     (when (> (count new-defs) max-defs)
       (bulk-unmap nspace new-defs))))
-
-(defn- read-tester [tester]
-  (with-out-str (binding [*print-dup* true] (pr tester))))
 
 (defn- evaluator [code tester-str context nspace bindings]
   (fn []
@@ -287,7 +219,7 @@
       (eval init))
     (let [init-defs (conj (user-defs nspace) 'dot)]
       (fn [code tester & [bindings]]
-        (let [tester-str (read-tester tester)
+        (let [tester-str (pr-str tester)
               old-defs (user-defs nspace)]
           (when jvm (set-security-manager (SecurityManager.)))
           (try
