@@ -23,11 +23,14 @@
 (defn blacklist-nses
   "Blacklist Clojure namespaces. nses should be a collection of namespaces."
   [nses]
-  (sfn/fn [s]
-          (first (filter #(or (= s %)
-                              (when (symbol? s)
-                                (.startsWith (name s) (str %))))
-                         nses))))
+  (let [nses (map wrap-object nses)]
+    (sfn/fn [s]
+            (when-let [result (first (filter #(let [n (.object %)]
+                                                (or (= s n)
+                                                    (when (symbol? s)
+                                                      (.startsWith (name s) (str n)))))
+                                             nses))]
+              (.object result)))))
 
 (defn blacklist-symbols
   "Blacklist symbols. Second argument should be a set of symbols."
@@ -83,6 +86,7 @@
        push-thread-bindings pop-thread-bindings future-call agent send
        send-off pmap pcalls pvals in-ns System/out System/in System/err
        with-redefs})
+   (blacklist-nses '[clojure.main])
    (blanket "clojail")])
 
 (def ^{:doc "A somewhat secure tester. No promises."}
