@@ -134,3 +134,13 @@
   (let [sb (sandbox [(blacklist-symbols '#{eval})])]
     (is (thrown? SecurityException
                  (sb '(.invoke (clojure.core$eval.) '(+ 3 3)))))))
+
+(deftest class-blacklist
+  (let [sb (sandbox secure-tester)]
+    (is (thrown-with-msg? java.util.concurrent.ExecutionException #"Namespace"
+                 (sb '(((.getMappings
+                         (first
+                          (filter #(= (.name %) 'clojure.core) 
+                                  (all-ns)))) 
+                        (symbol "eval")) 
+                       (read-string "(+ 1 2)")))))))
