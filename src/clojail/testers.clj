@@ -9,9 +9,9 @@
 
 (defmethod print-method ClojailWrapper
   [p out]
-  (.write out (str "#=(clojail.testers/->ClojailWrapper "
+  (.write out (str "#clojail.testers.ClojailWrapper["
                    (binding [*print-dup* true] (pr-str (.object p)))
-                   ")")))
+                   "]")))
 
 (defn wrap-object
   "Wraps an object in the ClojailWrapper type to be passed into the tester."
