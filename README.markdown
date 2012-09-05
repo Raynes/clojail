@@ -36,9 +36,11 @@ create a sandbox:
 
 ```clojure
 (ns my.project
-  (:use clojail.core)) ; Pull in the library.
+  (:use [clojail.core :only [sandbox]]
+        [clojail.testers :only [blacklist-symbols blacklist-objects]]))
     
-(def tester #{'alter-var-root java.lang.Thread}) ; Create a blacklist.
+(def tester [(blacklist-symbols #{'alter-var-root})
+             (blacklist-objects [java.lang.Thread])])) ; Create a blacklist.
 (def sb (sandbox tester :timeout 5000))
 ```
 
@@ -54,11 +56,11 @@ secure. Can't promise total security however, since I can't test
 everything.
 
 ```clojure
-(ns my.project
-  (:use [clojail core testers]))
-  
 (def sb (sandbox secure-tester))
 ```
+
+The `secure-tester` tester is a collection of things we have accumulated as
+unsafe over time. It blacklists various namespaces, classes, functions, etc.
 
 Don't bother setting `:timeout` unless you just want to. The sandbox
 has a reasonable default.
@@ -99,32 +101,32 @@ give us feedback! We especially like to hear how people are using sandboxing.
 
 ### Testers
 
-A tester is a set of objects, usually symbols, packages, and classes, that
-is considered as a blacklist and used to test if code is bad.
+If you're a curious fellow or gal, you're probably wondering what exactly a
+tester is. Well, in older releases testers were a set of objects. Over time we
+realized we could do better. These days, clojail testers are very clever
+collections of serializable functions created with the
+[serializable-fn](https://github.com/technomancy/serializable-fn) project. These
+functions take a 'thing' which is anything clojail pulls out of possibly unsafe
+code, so classes, namespaces, symbols, numbers, television, whatever, and they
+return a truthy value if the thing is bad or a non truthy value if it passes.
 
-A nice feature of clojail is that you can blacklist
-entire Java packages. Don't want anything in the java.lang.reflect
-package? Fine:
+The important part is that they are serializable. They have to be serializable
+to a string in order for us to secure java interop. We do some magic that
+requires printing the tester to a string (not with print-dup, though that may
+seem weird) and then reading it inside of your own code. Because of that,
+anything inside of a tester needs to be round-trippable, and that's why we use
+serializable functions. We also have a ClojailWrapper type that you can wrap
+objects in for your own serializable functions in order to define a print-method
+for them, that way you don't have to create a print-method for some top-level
+thing in your own code (which is bad because it is global). It is also necessary
+for some other things that you probably don't care about.
 
-```clojure
-(use '[clojail.testers :only [p]])
-(def reflect-blacklist #{(p "java.lang.reflect")})
-```
-
-Now you have a tester that will scream rape if someone tries to
-execute code using any classes from the reflect package.
-
-#### Serializable functions
-
-As of the 0.6.0 release of clojail, you can put functions in testers with the caveat that
-they must be serializable. This means you have to use [serializable-fn](https://github.com/technomancy/serializable-fn).
-It is nice in that it can even serialize (most) closures correctly, so as long as your fns
-are not too complex, they should work just fine.
-
-This allows for some added flexibility. An example of this new feature is the new `blanket` function
-in `clojail.testers`. It allows you to blanket blacklist all namespaces under a common prefix.
-It looks up the namespaces on the classpath using [bultitude](https://github.com/Raynes/bultitude)
-and adds serializable functions to the tester to check for the prefix itself.
+If none of this makes sense, just take a look at `clojail.testers`. It has, of
+course, `secure-tester`, but more importantly it has a bunch of high-level
+functions for creating serializable fns for testers out of various objects. We
+used some of them above! It is unlikely that you'll have to manually create a
+serializable function for usage with clojail, but if you do, this namespace
+should be helpful.
 
 ## Warning
 
@@ -136,25 +138,6 @@ the JVM sandbox, even if the Clojure sandbox is broken, I/O still
 can't be done. Even if clojail breaks, the breaker can't wipe your
 system unless he has broken the JVM sandbox, in which case he has worked
 hard and earned his prize.
-
-### What can happen?
-
-If somebody finds a hole in your Clojure sandbox, all they can do is
-break the state of the sandbox. Meaning, if they find a way to use
-'eval', they can eval any code they like. That code will still be
-evaluated under the JVM sandbox. They can, however, use eval to call
-def and redefine stuff in the sandbox. This also means they can cause
-out-of-memory errors by defining a bunch of stuff. You'll want to
-prepare for such things.
-
-We're considering making an effort to maintain a tester in
-clojail.testers that tries to block out *everything* that's bad. The
-reason we haven't undertaken that task so far is because we don't want
-anybody to assume that the tester is totally secure, because you can
-never really be certain. `secure-tester` is unfortunately named. It
-should be `secure-enough-tester` or `rather-secure-tester`. For the
-most part, secure-tester *is* secure enough. Just be aware that there
-will probably be holes, just not catastrophic ones.
 
 ## License
 
