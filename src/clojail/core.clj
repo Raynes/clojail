@@ -24,7 +24,7 @@
              {alias enum})))
 
 (defn thunk-timeout
-  "Takes a function and an amount of time to wait for the function to finish
+  "Takes a function and an amount of time to wait for thse function to finish
    executing. The sandbox can do this for you. unit is any of :ns, :us, :ms,
    or :s which correspond to TimeUnit/NANOSECONDS, MICROSECONDS, MILLISECONDS,
    and SECONDS respectively."
@@ -128,12 +128,12 @@
 
 (defn- make-dot
   "Returns a safe . macro."
-  [tester-str]
+  [tester-sym]
   `(defmacro ~'dot [object# method# & args#]
-     `(let [~'tester-obj# (binding [*read-eval* true] (eval (read-string ~~tester-str)))
-            ~'obj# ~object#
+     `(let [~'obj# ~object#
             ~'obj-class# (class ~'obj#)]
-        (if-let [~'bad# (some (partial clojail.core/unsafe? ~'tester-obj#) [~'obj-class# ~'obj# (.getPackage ~'obj-class#)])]
+        (if-let [~'bad# (some (partial clojail.core/unsafe? ~~tester-sym)
+                              [~'obj-class# ~'obj# (.getPackage ~'obj-class#)])]
           (clojail.core/security-exception ~'bad#)
           (. ~object# ~method# ~@args#)))))
 
@@ -163,8 +163,11 @@
     (binding [*ns* nspace
               *read-eval* false]
       (let [bindings (or bindings {})
-            code `(do ~(make-dot tester-str)
-                      ~(ensafen code))]
+            tester-sym (gensym "tester")
+            code `(do (def ~tester-sym (binding [*read-eval* true]
+                                         (read-string ~tester-str)))
+                       ~(make-dot tester-sym)
+                       ~(ensafen code))]
         (with-bindings bindings (jvm-sandbox #(eval code) context))))))
 
 (defn set-security-manager
@@ -269,3 +272,4 @@ IllegalStateException; other exceptions will be thrown unchanged."
   ([str]
      (with-in-str str
        (safe-read))))
+
