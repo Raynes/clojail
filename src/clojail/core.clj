@@ -29,9 +29,9 @@
    or :s which correspond to TimeUnit/NANOSECONDS, MICROSECONDS, MILLISECONDS,
    and SECONDS respectively."
   ([thunk ms]
-     (thunk-timeout thunk ms :ms)) ; Default to milliseconds, because that's pretty common.
+     (thunk-timeout thunk ms :ms nil)) ; Default to milliseconds, because that's pretty common.
   ([thunk time unit]
-     (thunk-timeout thunk time unit identity))
+     (thunk-timeout thunk time unit nil))
   ([thunk time unit tg]
      (let [task (FutureTask. thunk)
            thr (if tg (Thread. tg task) (Thread. task))]
