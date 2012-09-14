@@ -32,10 +32,8 @@
      (thunk-timeout thunk ms :ms)) ; Default to milliseconds, because that's pretty common.
   ([thunk time unit]
      (thunk-timeout thunk time unit identity))
-  ([thunk time unit transform]
-     (thunk-timeout thunk time unit identity nil))
-  ([thunk time unit transform tg]
-     (let [task (FutureTask. (comp transform thunk))
+  ([thunk time unit tg]
+     (let [task (FutureTask. thunk)
            thr (if tg (Thread. tg task) (Thread. task))]
        (try
          (.start thr)
@@ -158,7 +156,7 @@
     (when (> (count new-defs) max-defs)
       (bulk-unmap nspace new-defs))))
 
-(defn- evaluator [code tester-str context nspace bindings]
+(defn- evaluator [code tester-str context nspace transform bindings]
   (fn []
     (binding [*ns* nspace
               *read-eval* false]
@@ -168,7 +166,7 @@
                                          (read-string ~tester-str)))
                        ~(make-dot tester-sym)
                        ~(ensafen code))]
-        (with-bindings bindings (jvm-sandbox #(eval code) context))))))
+        (with-bindings bindings (transform (jvm-sandbox #(eval code) context)))))))
 
 (defn set-security-manager
   "Sets the system security manager to whatever you pass. Passing nil is
@@ -229,10 +227,9 @@
             (if-let [problem (check-form code tester nspace)] 
               (security-exception problem)
               (thunk-timeout
-               (evaluator code tester-str context nspace bindings)
+               (evaluator code tester-str context nspace transform bindings)
                timeout
                :ms
-               transform
                (ThreadGroup. "sandbox")))
             (finally (wipe-defs init-defs old-defs max-defs nspace))))))))
 
