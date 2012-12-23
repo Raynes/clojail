@@ -140,7 +140,15 @@
     (is (thrown-with-msg? java.util.concurrent.ExecutionException #"Namespace"
                  (sb '(((.getMappings
                          (first
-                          (filter #(= (.name %) 'clojure.core) 
-                                  (all-ns)))) 
-                        (symbol "eval")) 
+                          (filter #(= (.name %) 'clojure.core)
+                                  (all-ns))))
+                        (symbol "eval"))
                        (read-string "(+ 1 2)")))))))
+
+(deftest fast-enough
+  (let [sb (sandbox secure-tester)]
+    (are [form] (= (eval form) (sb form))
+         '(str (for [x (range 1000000)]
+                 x))
+         '(dotimes [n 1000000]
+            (Math/ceil n)))))
