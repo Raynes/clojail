@@ -156,12 +156,11 @@
     (when (> (count new-defs) max-defs)
       (bulk-unmap nspace new-defs))))
 
-(defn- evaluator [code tester-str context nspace transform bindings]
+(defn- evaluator [code tester-sym tester-str context nspace transform bindings]
   (fn []
     (binding [*ns* nspace
               *read-eval* false]
       (let [bindings (or bindings {})
-            tester-sym (gensym "tester")
             code `(do (def ~tester-sym (binding [*read-eval* true]
                                          (read-string ~tester-str)))
                        ~(make-dot tester-sym)
@@ -218,7 +217,8 @@
     (binding [*ns* nspace]
       (when refer-clojure (clojure.core/refer-clojure))
       (eval init))
-    (let [init-defs (conj (user-defs nspace) 'dot)]
+    (let [tester-sym (gensym "tester")
+          init-defs (conj (user-defs nspace) 'dot tester-sym)]
       (fn [code tester & [bindings]]
         (let [tester-str (pr-str tester)
               old-defs (user-defs nspace)]
@@ -227,7 +227,7 @@
             (if-let [problem (check-form code tester nspace)] 
               (security-exception problem)
               (thunk-timeout
-               (evaluator code tester-str context nspace transform bindings)
+               (evaluator code tester-sym tester-str context nspace transform bindings)
                timeout
                :ms
                (ThreadGroup. "sandbox")))
