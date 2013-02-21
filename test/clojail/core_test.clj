@@ -145,7 +145,7 @@
                         (symbol "eval"))
                        (read-string "(+ 1 2)")))))))
 
-(deftest fast-enough
+#_(deftest fast-enough
   (let [sb (sandbox secure-tester)]
     (are [form] (= (eval form) (sb form))
          '(str (for [x (range 1000000)]
