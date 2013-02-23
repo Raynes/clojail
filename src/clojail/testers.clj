@@ -74,7 +74,8 @@
 (def ^{:doc "A tester that attempts to be secure, and allows def."}
   secure-tester-without-def
   [(blacklist-objects [clojure.lang.Compiler clojure.lang.Ref clojure.lang.Reflector
-                       clojure.lang.Namespace clojure.lang.Var clojure.lang.RT])
+                       clojure.lang.Namespace clojure.lang.Var clojure.lang.RT
+                       java.io.ObjectInputStream])
    (blacklist-packages ["java.lang.reflect"
                         "java.security"
                         "java.util.concurrent"

@@ -151,6 +151,15 @@
                         (symbol "eval"))
                        (read-string "(+ 1 2)")))))))
 
+(deftest serialization-test
+  (let [sb (sandbox secure-tester)]
+    (sb '(-> "ACED000573720011636C6F6A7572652E636F7265246576616C4AFAD1663CDD43B502000078720016636C6F6A7572652E6C616E672E4146756E6374696F6E3E06709C9E46FDCB0200014C00115F5F6D6574686F64496D706C436163686574001E4C636C6F6A7572652F6C616E672F4D6574686F64496D706C43616368653B787070"
+             javax.xml.bind.DatatypeConverter/parseHexBinary
+             java.io.ByteArrayInputStream.
+             java.io.ObjectInputStream.
+             .readObject)
+        '(+ 1 2))))
+
 #_(deftest fast-enough
   (let [sb (sandbox secure-tester)]
     (are [form] (= (eval form) (sb form))
