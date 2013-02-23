@@ -78,6 +78,12 @@
         (sb-three form))
       (is (= 0 (sb-three 'foo))))))
 
+(deftest with-redefs-regression
+  (testing "Complete breakage of subsequent tests if with-redefs is allowed"
+    (let [sb (sandbox secure-tester)]
+      (is (thrown-with-msg? SecurityException #"is bad!"
+            (sb '(with-redefs [let #'fn] (inc 4))))))))
+
 (deftest require-test
   (let [sb (sandbox secure-tester)]
     (is (nil? (sb '(require 'clojure.string))))))
