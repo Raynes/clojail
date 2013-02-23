@@ -86,7 +86,7 @@
        *read-eval* ns-publics ns-unmap set! ns-map ns-interns the-ns
        push-thread-bindings pop-thread-bindings future-call agent send
        send-off pmap pcalls pvals in-ns System/out System/in System/err
-       with-redefs-fn})
+       with-redefs-fn Class/forName})
    (blacklist-nses '[clojure.main])
    (blanket "clojail")])
 
