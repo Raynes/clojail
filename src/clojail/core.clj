@@ -1,8 +1,7 @@
 (ns clojail.core
-  (:use clojure.stacktrace
-        [clojure.walk :only [walk postwalk-replace]]
-        clojail.jvm)
-  (:require serializable.fn)
+  (:require [clojure.stacktrace :refer [root-cause]]
+            [clojure.walk :refer [walk postwalk-replace]]
+            [clojail.jvm :refer [permissions domain context jvm-sandbox]]) 
   (:import (java.util.concurrent TimeoutException TimeUnit FutureTask)
            (clojure.lang LispReader$ReaderException)))
 
