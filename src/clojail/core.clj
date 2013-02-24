@@ -1,7 +1,8 @@
 (ns clojail.core
   (:require [clojure.stacktrace :refer [root-cause]]
             [clojure.walk :refer [walk postwalk-replace]]
-            [clojail.jvm :refer [permissions domain context jvm-sandbox]]) 
+            [clojail.jvm :refer [permissions domain context jvm-sandbox]]
+            [flatland.useful.seq :refer [flatten-all]]) 
   (:import (java.util.concurrent TimeoutException TimeUnit FutureTask)
            (clojure.lang LispReader$ReaderException)))
 
@@ -57,10 +58,6 @@
        ;; is thrown appears to be different depending on which version of Clojure you use.
        (catch RuntimeException _ s)
        (catch ClassNotFoundException _ s)))
-
-(defn flatten-all
-  "The core flatten doesn't flatten maps."
-  [form] (remove coll? (tree-seq coll? seq form)))
 
 (defn- macroexpand-most
   "Macroexpand most, but not all. Leave non-collections and quoted things alone."
