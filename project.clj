@@ -7,6 +7,6 @@
                  [bultitude "0.1.6"]
                  [serializable-fn "1.1.3"]
                  [org.flatland/useful "0.9.3"]]
-  :aliases {"testall" ["with-profile" "dev,1.3:dev" "test"]}
-  :profiles {:1.3 {:dependencies [[org.clojure/clojure "1.3.0"]]}}
+  :aliases {"testall" ["with-profile" "dev,1.5:dev" "test"]}
+  :profiles {:1.5 {:dependencies [[org.clojure/clojure "1.5.0-RC16"]]}}
   :jvm-opts ["-Djava.security.policy=example.policy"])
