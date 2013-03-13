@@ -168,3 +168,8 @@
                  x))
          '(dotimes [n 1000000]
             (Math/ceil n)))))
+
+(deftest laziness-test
+  (let [sb (sandbox secure-tester)]
+    (is (thrown-with-msg? Exception #"access denied"
+          (sb '(map slurp ["project.clj"]))))))

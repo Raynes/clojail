@@ -9,9 +9,7 @@
 (defn eagerly-consume
   "Recursively force all lazy-seqs in val."
   [val]
-  (try
-    (postwalk-replace {} val)
-    (catch Throwable _))
+  (postwalk-replace {} val)
   val)
 
 (def ^{:doc "Create a map of pretty keywords to ugly TimeUnits"}
@@ -161,7 +159,7 @@
                                          (read-string ~tester-str)))
                        ~(make-dot tester-sym)
                        ~(ensafen code))]
-        (with-bindings bindings (transform (jvm-sandbox #(eval code) context)))))))
+        (with-bindings bindings (jvm-sandbox #(transform (eval code)) context))))))
 
 (defn set-security-manager
   "Sets the system security manager to whatever you pass. Passing nil is
