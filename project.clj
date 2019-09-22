@@ -3,7 +3,7 @@
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :url "https://github.com/flatland/clojail"
-  :dependencies [[org.clojure/clojure "1.7.0"]
+  :dependencies [[org.clojure/clojure "1.10.1"]
                  [bultitude "0.2.7"]
                  [serializable-fn "1.1.4"]
                  [org.flatland/useful "0.11.3"]]
