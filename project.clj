@@ -1,12 +1,15 @@
-(defproject clojail "1.0.7"
+(defproject yogthos/clojail "1.0.7"
   :description "A sandboxing library."
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :url "https://github.com/flatland/clojail"
   :dependencies [[org.clojure/clojure "1.10.1"]
-                 [bultitude "0.2.7"]
+                 [org.tcrawley/dynapath "1.0.0"]
                  [serializable-fn "1.1.4"]
-                 [org.flatland/useful "0.11.3"]]
-  :aliases {"testall" ["with-profile" "dev,1.5:dev" "test"]}
-  :profiles {:1.5 {:dependencies [[org.clojure/clojure "1.5.0"]]}}
-  :jvm-opts ["-Djava.security.policy=example.policy"])
+                 [org.flatland/useful "0.11.6"]]
+  :jvm-opts ["-Djava.security.policy=example.policy"]
+  :profiles {:test {:dependencies
+                    [[javax.xml.bind/jaxb-api "2.2.11"]
+                     [com.sun.xml.bind/jaxb-core "2.2.11"]
+                     [com.sun.xml.bind/jaxb-impl "2.2.11"]
+                     [javax.activation/activation "1.1.1"]]}})

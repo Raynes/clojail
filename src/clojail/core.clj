@@ -1,10 +1,12 @@
 (ns clojail.core
-  (:require [clojure.stacktrace :refer [root-cause]]
-            [clojure.walk :refer [walk postwalk-replace]]
-            [clojail.jvm :refer [permissions domain context jvm-sandbox]]
-            [flatland.useful.seq :refer [flatten-all]]) 
-  (:import (java.util.concurrent TimeoutException TimeUnit FutureTask)
-           (clojure.lang LispReader$ReaderException)))
+  (:require 
+   [clojure.stacktrace :refer [root-cause]]
+   [clojure.walk :refer [walk postwalk-replace]]
+   [clojail.jvm :refer [permissions domain context jvm-sandbox]]
+   [flatland.useful.seq :refer [flatten-all]]) 
+  (:import
+   [java.util.concurrent TimeoutException TimeUnit FutureTask]
+   [clojure.lang LispReader$ReaderException]))
 
 (defn eagerly-consume
   "Recursively force all lazy-seqs in val."
