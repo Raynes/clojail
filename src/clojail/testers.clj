@@ -2,8 +2,9 @@
   "A set of predefined testers that you can use in your own sandboxes.
    I'm not promising that any of these are really totally secure. I cannot
    possibly test these for everything."
-  (:require [bultitude.core :as nses]
-            [serializable.fn :as sfn]))
+  (:require
+   [clojail.classpath :as nses]
+   [serializable.fn :as sfn]))
 
 (deftype ClojailWrapper [object])
 

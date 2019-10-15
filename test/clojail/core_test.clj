@@ -33,7 +33,7 @@
 
 (deftest macroexpand-test
   (is (= 'let (sb '(first '(let [x 1] x)))))
-  (is (= '(dec (clojure.core/-> x inc))
+  (is (= '(dec (inc x))
          (sb '(macroexpand '(-> x inc dec)))))
   (is (= 1 (sb '(-> 0 inc dec inc))))
   (is (= '(. "" length) (sb ''(. "" length)))))
@@ -68,11 +68,11 @@
     (testing "Leaves new defs if they're less than max def."
       (doseq [form (def-forms '[q w e r t y u i])]
         (sb-one form))
-      (is (thrown-with-msg? ExecutionException #"Unable to resolve symbol" (sb-one 't)))
+      (is (thrown-with-msg? ExecutionException #"Syntax error" (sb-one 't)))
       (is (= 0 (sb-one 'i))))
     (testing "Destroys old *and* new defs if new defs is also over max-def."
       (sb-two (cons 'do (map #(list 'def % 0) '[a b c d e f])))
-      (is (thrown-with-msg? ExecutionException #"Unable to resolve symbol" (sb 'f))))
+      (is (thrown-with-msg? ExecutionException #"Syntax error" (sb 'f))))
     (testing "Leaves init defs."
       (doseq [form (def-forms '[q w e r t y])]
         (sb-three form))
